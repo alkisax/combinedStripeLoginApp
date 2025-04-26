@@ -5,6 +5,7 @@ const adminRoutes = require('./routes/admin.routes')
 const loginRoutes = require('./routes/auth.routes')
 const participantRoutes = require('./routes/participant.routes')
 const transactionRoutes = require('./routes/transaction.routes')
+const stripeRoutes = require('./routes/stripe.routes')
 
 // const path = require('path'); // requires explanation. added for rendering front page subpages
 
@@ -17,6 +18,7 @@ app.use('/api/admin', adminRoutes)
 app.use('/api/login', loginRoutes)
 app.use('/api/participant', participantRoutes)
 app.use('/api/transaction', transactionRoutes)
+app.use('/api/stripe', stripeRoutes)
 
 // app.get('/*', (req, res, next) => {
 //   if (req.path.startsWith('/api')) {
