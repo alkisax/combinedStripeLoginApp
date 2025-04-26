@@ -11,8 +11,8 @@ const transactionSchema = new Schema({
     default: false
   },
   participant: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Participant',
+    type: mongoose.Schema.Types.ObjectId, // This stores a reference (ID) to a Participant document
+    ref: 'Participant', // This tells Mongoose to link this field to the 'Participant' model
     required: true
   }
 },

@@ -111,6 +111,7 @@ exports.googleLogin = async(req, res) => {
   const frontendUrl = process.env.FRONTEND_URL
   console.log(frontendUrl);
   
-  return res.redirect(`${frontendUrl}/google-success?token=${token}&email=${dbUser.email}`);
+  // return res.redirect(`${frontendUrl}/google-success?token=${token}&email=${dbUser.email}`);
+  return res.redirect(`${frontendUrl}/?token=${token}&email=${dbUser.email}`);
 }
 

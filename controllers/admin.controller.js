@@ -7,9 +7,9 @@ exports.findAll = async (req,res) => {
   try {
 
     // add later when auth
-    // if (!req.headers.authorization) {
-    //   return res.status(401).json({ status: false, error: 'No token provided' });
-    // }
+    if (!req.headers.authorization) {
+      return res.status(401).json({ status: false, error: 'No token provided' });
+    }
 
     const admins = await adminDAO.findAllAdmins();
     res.status(200).json({ status: true, data: admins });

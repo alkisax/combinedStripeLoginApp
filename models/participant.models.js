@@ -17,8 +17,8 @@ const participantSchema = new Schema({
     unique: true
   },
   transactions: [{
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Transaction'
+    type: mongoose.Schema.Types.ObjectId, // Each item here is an ObjectId pointing to a Transaction document
+    ref: 'Transaction' // This tells Mongoose *which* collection/model to link (the 'Transaction' model)
   }],
 },
 {

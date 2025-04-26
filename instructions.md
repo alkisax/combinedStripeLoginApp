@@ -295,3 +295,72 @@ module.exports = router
 ## ξεκινάω την αντιγραφή του auth
 ### service controler routes middleware
 
+# postman test
+postman test
+post http://localhost:3000/api/login
+{
+    "username": "alkisax",
+    "password": "123"
+}
+		"token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6ImFsa2lzYXgiLCJlbWFpbCI6ImFsa2lzYXhAZ21haWwuY29tIiwicm9sZXMiOlsiYWRtaW4iXSwiaWQiOiI2ODA5MjEwZWE3NDgxNTkwZTk3NTk4NjYiLCJpYXQiOjE3NDU2ODExNTQsImV4cCI6MTc0NTY4NDc1NH0.Nxbnd0gqTey5e1zt9z3n2pH3IPazcEooGqew2jq7vlI",
+get http://localhost:3000/api/participant
+{
+	"status": true,
+	"data": []
+}
+post
+{
+    "name":"donator",
+    "surname": "mr nice guy",
+    "email":"samaritan@holymail.com"
+}
+{
+	"name": "donator",
+	"surname": "mr nice guy",
+	"email": "samaritan@holymail.com",
+	"transactions": [],
+	"_id": "680cfc08a7a6419a9a1370ab",
+	"createdAt": "2025-04-26T15:30:16.976Z",
+	"updatedAt": "2025-04-26T15:30:16.976Z",
+	"__v": 0
+}
+post http://localhost:3000/api/transaction
+{
+    "amount":50,
+    "participant":"680cfc08a7a6419a9a1370ab"
+}
+{
+	"amount": 50,
+	"processed": false,
+	"participant": "680cfc08a7a6419a9a1370ab",
+	"_id": "680d06867f262158f31e367d",
+	"createdAt": "2025-04-26T16:15:02.863Z",
+	"updatedAt": "2025-04-26T16:15:02.863Z",
+	"__v": 0
+}
+get http://localhost:3000/api/participant
+{
+	"status": true,
+	"data": [
+		{
+			"_id": "680cfc08a7a6419a9a1370ab",
+			"name": "donator",
+			"surname": "mr nice guy",
+			"email": "samaritan@holymail.com",
+			"transactions": [
+				{
+					"_id": "680d06867f262158f31e367d",
+					"amount": 50,
+					"processed": false,
+					"participant": "680cfc08a7a6419a9a1370ab",
+					"createdAt": "2025-04-26T16:15:02.863Z",
+					"updatedAt": "2025-04-26T16:15:02.863Z",
+					"__v": 0
+				}
+			],
+			"createdAt": "2025-04-26T15:30:16.976Z",
+			"updatedAt": "2025-04-26T16:15:03.674Z",
+			"__v": 0
+		}
+	]
+}
