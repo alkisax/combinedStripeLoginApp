@@ -30,7 +30,7 @@ exports.create = async (req,res) => {
   const name = data.name
   const surname = data.surname
   const email = data.email
-  const transactions = data.password
+  const transactions = data.transactions
 
   try {
 

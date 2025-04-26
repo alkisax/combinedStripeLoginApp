@@ -37,11 +37,13 @@ const handleSuccess = async (req, res) => {
 
     participant = await participantDAO.findParticipantByEmail(customerEmail);
 
-    await transactionDAO.createTransaction({
+    const newTransaction = await transactionDAO.createTransaction({
       amount: amountTotal,
       processed: true,
       participant: participant._id
     });
+
+    await participantDAO.addTransactionToParticipant(participant._id, newTransaction._id);
 
     return res.send('Success! Your donation was recorded. Thank you!');
   } catch (error) {

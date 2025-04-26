@@ -12,8 +12,8 @@ import AdminPanel from './components/AdminPanel'
 import ProtectedRoute from './services/ProtectedRoute'
 import UserDetail from './components/UserDetail'
 
-const url = 'http://localhost:3000/api'
-// const url = 'https://loginapp-tjlf.onrender.com/api'
+// const url = 'http://localhost:3000/api'
+const url = 'https://loginapp-tjlf.onrender.com/api'
 
 const App = () => {
   const [user, setUser] = useState(null)
