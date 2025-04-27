@@ -1,11 +1,13 @@
 import { Navigate } from 'react-router-dom';
 
-const ProtectedRoute = ({ user, children, requiredRole }) => {
-  if (!user) {
+const ProtectedRoute = ({ admin , children, requiredRole }) => {
+  if (!admin) {
+    console.log("protected failed");    
     return <Navigate to="/" />;
   }
 
-  if (requiredRole && !user.roles.includes(requiredRole)) {
+  if (requiredRole && !admin.roles.includes(requiredRole)) {
+    console.log("protected passed"); 
     return <Navigate to="/" />;
   }
 

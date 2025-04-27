@@ -5,15 +5,16 @@ import {
   BrowserRouter as Router,
   Routes, Route, Link, useNavigate
 } from 'react-router-dom'
+import { Container } from 'react-bootstrap'
+import Checkout from './components/Checkout'
 import GoogleSuccess from './components/GoogleSuccess'
 import LoginForm from './components/LoginForm'
-import UserLogedInView from './components/UserLogedInView'
+import AdminLogedInView from './components/AdminLogedInView'
 import AdminPanel from './components/AdminPanel'
 import ProtectedRoute from './services/ProtectedRoute'
 import UserDetail from './components/UserDetail'
 
 const url = 'http://localhost:3000/api'
-// const url = 'https://loginapp-tjlf.onrender.com/api'
 
 const App = () => {
   const [user, setUser] = useState(null)
@@ -22,22 +23,19 @@ const App = () => {
   const [password, setPassword] = useState('')
   const [userIsAdmin, setUserIsAdmin] = useState(false)
   const [users, setUsers] = useState([])
+  const [participants, setParticipants] = useState([])
+  const [admin, setAdmin] = useState(null)
 
   const navigate = useNavigate()
   
-  // useEffect(() => {
-  //   axios.get(`${url}/message`)
-  //     .then(res => setMessage(res.data.message))
-  //     .catch(err => console.error(err));
-  // }, [])
-
   useEffect(() => {
     const token = localStorage.getItem("token")
     const roles = JSON.parse(localStorage.getItem("roles"))
-    if (token && roles) {
+    const adminFromStorage = JSON.parse(localStorage.getItem("admin"))
+    if (token && roles && roles.includes('admin') && adminFromStorage) {
       const userFromStorage = { token, roles }
-      setUser(userFromStorage) 
-      setUserIsAdmin(roles.includes("admin")) 
+      setAdmin(userFromStorage)
+      setUserIsAdmin(true) 
     }
   }, [])
 
@@ -51,12 +49,15 @@ const App = () => {
         "password": password
       })
       console.log("Login successful", response.data)
-      const { token, user } = response.data.data
-      setUser(user)
+      const { token, admin } = response.data.data
+      setUser(admin)
       localStorage.setItem("token", token)
-      localStorage.setItem("roles", JSON.stringify(user.roles))
+      localStorage.setItem("roles", JSON.stringify(admin.roles))
 
-      const isAdmin = user.roles.includes("admin")
+      setAdmin({ token, roles: admin.roles })
+      localStorage.setItem("admin", JSON.stringify(admin));
+
+      const isAdmin = admin.roles.includes("admin")
       setUserIsAdmin(isAdmin)
       console.log("Is admin?", isAdmin)
 
@@ -67,46 +68,60 @@ const App = () => {
 
   const handleLogout = async () => {
     localStorage.removeItem("token")
-    setUser(null)
+    localStorage.removeItem("roles");
+    localStorage.removeItem("admin");
+    setAdmin(null)
     setUserIsAdmin(false)
     console.log("Logged out successfully")
   }
 
   const handleAdminBtn = () => {
+    console.log("Admin Btn clicked, is admin:", userIsAdmin)
     navigate("/admin")   
   }
 
-  const handleDeleteUser = async (userId) => {
-    const isConfirmed = window.confirm("Are you sure you want to delete this user?")
+  const handleDeleteParticipant = async (participantId) => {
+    const isConfirmed = window.confirm("Are you sure you want to delete this participant?")
     if (!isConfirmed) {
-      console.log("User deletion cancelled");
+      console.log("Participant deletion cancelled");
       return; // Exit the function if the user cancels
     }
     const token = localStorage.getItem("token");
     try {
-      const response = await axios.delete(`${url}/users/${userId}`, {
+      const response = await axios.delete(`${url}/participant/${participantId}`, {
         headers: {
           Authorization: `Bearer ${token}`
         }
       });
 
-      console.log("User deleted", response.data);
-      alert('User deleted successfully!')
+      console.log("Participant deleted", response.data);
+      alert('Participant deleted successfully!')
 
-      // ✅ απλό "φρεσκάρισμα" της σελίδας για να ξανατραβήξει τα δεδομένα
-      // window.location.reload()
-      setUsers(users.filter(user => user._id !== userId)); // αυτο προστεθηκε γιατι δεν πρεπει να κανεις ανανεωση της σελιδας σε single page app
+      setParticipants(participants.filter(participant => participant._id !== participantId)); // αυτο προστεθηκε γιατι δεν πρεπει να κανεις ανανεωση της σελιδας σε single page app
 
     } catch (error) {
-      console.error("Failed to delete user", error.response?.data || error.message);
+      console.error("Failed to delete participant", error.response?.data || error.message);
     }
   };
   
   return (
-    <div>
+    <div className="bg-dark text-light  d-flex flex-column justify-content-center align-items-center" style={{ minHeight: '100vh'}}>
       <h6>{message}</h6>
-      <h1>Login APP</h1>
-      {user && <button onClick={handleLogout}>log out</button>}
+      <h1>Donate APP</h1>
+      <p>stripe + login app</p>
+      <p className="text-center text-secondary small">to create an admin has to be done through backend with postman.
+      post http://localhost:3000/api/admin
+      {`{
+        "username": "newadmin",
+        "name": "New Admin",
+        "email": "newadmin@example.com",
+        "password": "password123",
+        "roles": ["admin"] 
+      }`}
+      </p>
+      {admin && <button onClick={handleLogout}>log out</button>}
+
+      <Checkout />
 
       {/* Universal Home Button */}
       <Link to="/" className="home-btn">
@@ -117,7 +132,7 @@ const App = () => {
       <Routes>
         <Route path="/" element={
           <>
-            {user === null && 
+            {admin === null && 
             <LoginForm 
               username={username}
               password={password}
@@ -126,8 +141,8 @@ const App = () => {
               handleLogin={handleLogin}
               url={url}
             />}
-            {user !==  null && 
-            <UserLogedInView 
+            {admin !==  null && 
+            <AdminLogedInView 
               handleLogout={handleLogout}
               userIsAdmin= {userIsAdmin}
               handleAdminBtn={handleAdminBtn}
@@ -137,10 +152,12 @@ const App = () => {
 
         <Route path="/admin" element={
           <>
-            <ProtectedRoute user={user} requiredRole="admin"></ProtectedRoute>
+            <ProtectedRoute admin={admin} requiredRole="admin"></ProtectedRoute>
             <AdminPanel
               url={url}
-              handleDeleteUser={handleDeleteUser}
+              handleDeleteParticipant={handleDeleteParticipant}
+              participants={participants}
+              setParticipants={setParticipants}
               users={users}
               setUsers={setUsers}
             />
@@ -151,7 +168,7 @@ const App = () => {
           <GoogleSuccess setUser={setUser} setUserIsAdmin={setUserIsAdmin} />
         } />
 
-        <Route path="/users" element={<AdminPanel handleDeleteUser={handleDeleteUser} url={url} />} />
+        <Route path="/users" element={<AdminPanel handleDeleteUser={handleDeleteParticipant} url={url} />} />
         <Route path="/users/:id" element={<UserDetail />} />
       </Routes>
     </div>

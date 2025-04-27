@@ -2,22 +2,23 @@
 import { useState, useEffect  } from "react"
 import { Link } from 'react-router-dom'
 import axios from 'axios'
-import NewUserForm from './NewUserForm'
+import NewParticipantForm from './NewParticipantForm'
 
-const AdminPanel = ({url, handleDeleteUser, users, setUsers}) => {
+const AdminPanel = ({url, handleDeleteParticipant, participants, setParticipants}) => {
   const [viewForm, setViewForm] = useState(false)
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchUsers = async () => {
+    const fetchParticipants = async () => {
       try {
         const token = localStorage.getItem("token"); 
-        const response = await axios.get(`${url}/users`, {
+        
+        const response = await axios.get(`${url}/participant`, {
           headers: {
             Authorization: `Bearer ${token}`, 
           },
         });
-        setUsers(response.data.data); 
+        setParticipants(response.data.data); 
         setLoading(false);
       } catch (error) {
         console.error("Error fetching users:", error);
@@ -25,7 +26,7 @@ const AdminPanel = ({url, handleDeleteUser, users, setUsers}) => {
       }
     };
 
-    fetchUsers();
+    fetchParticipants();
   }, [url]);
 
   return (
@@ -33,25 +34,25 @@ const AdminPanel = ({url, handleDeleteUser, users, setUsers}) => {
       <h2>Admin Panel</h2>
       <p>Only admins can see this.</p>
       {loading && <p>Loading...</p>}
-      {!loading && users.length === 0 && <p>No users found</p>}
+      {!loading && participants.length === 0 && <p>No participants found</p>}
       <ul>
-        {!loading && users.length !== 0 && 
-          users.map((user) => {
+        {!loading && participants.length !== 0 && 
+          participants.map((participant) => {
             return (
-              <li key={user._id || `${user.username}-${user.email}`}>
-                 <Link to={`/users/${user._id}`}>
-                  {user.username}
+              <li key={participant._id || `${participant.name}-${participant.email}`}>
+                 <Link to={`/users/${participant._id}`}>
+                  {participant.email}
                  </Link>
-                 - {user.name} - {user.email} - {user.roles.join(", ")}
-                 <button id={`${user.username}Btn`} onClick={() => handleDeleteUser(user._id)}>Delete</button>
+                 - {participant.name} - {participant.email} - {participant.surname}
+                 <button id={`${participant.email}Btn`} onClick={() => handleDeleteParticipant(participant._id)}>Delete</button>
               </li>
             )
           })
         } 
       </ul>
 
-      <button id="createUserBtn" onClick={() => setViewForm(!viewForm)}>create user form</button>
-      {viewForm && <NewUserForm users={users} setUsers={setUsers} url={url} />}
+      <button id="createParticipantBtn" onClick={() => setViewForm(!viewForm)}>create participant form</button>
+      {viewForm && <NewParticipantForm users={participants} setUsers={setParticipants} url={url} />}
 
     </div>
   )

@@ -59,7 +59,7 @@ exports.deleteById = async (req, res) => {
   }
   
   try {
-    const deleteParticipant = await participantDao.deleteAdminById(participantId) 
+    const deleteParticipant = await participantDao.deleteParticipantById(participantId) 
 
     if (!deleteParticipant){
       return res.status(404).json({
