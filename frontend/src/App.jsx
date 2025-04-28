@@ -13,6 +13,8 @@ import AdminLogedInView from './components/AdminLogedInView'
 import AdminPanel from './components/AdminPanel'
 import ProtectedRoute from './services/ProtectedRoute'
 import UserDetail from './components/UserDetail'
+import Appbar from './components/Appbar'
+import Home from './components/Home'
 
 const url = 'http://localhost:3000/api'
 
@@ -64,6 +66,7 @@ const App = () => {
     } catch (error) {
       console.log(error)     
     }
+    navigate("/")
   }
 
   const handleLogout = async () => {
@@ -73,6 +76,7 @@ const App = () => {
     setAdmin(null)
     setUserIsAdmin(false)
     console.log("Logged out successfully")
+    navigate("/")
   }
 
   const handleAdminBtn = () => {
@@ -106,47 +110,19 @@ const App = () => {
   
   return (
     <div className="bg-dark text-light  d-flex flex-column justify-content-center align-items-center" style={{ minHeight: '100vh'}}>
-      <h6>{message}</h6>
-      <h1>Donate APP</h1>
-      <p>stripe + login app</p>
-      <p className="text-center text-secondary small">to create an admin has to be done through backend with postman.
-      post http://localhost:3000/api/admin
-      {`{
-        "username": "newadmin",
-        "name": "New Admin",
-        "email": "newadmin@example.com",
-        "password": "password123",
-        "roles": ["admin"] 
-      }`}
-      </p>
-      {admin && <button onClick={handleLogout}>log out</button>}
 
-      <Checkout />
-
-      {/* Universal Home Button */}
-      <Link to="/" className="home-btn">
-        <button id='home'>Home</button>
-      </Link>
+      <Appbar 
+        admin={admin}
+        handleLogout={handleLogout}
+      />
 
       {/* Routes here handle sub-pages like /admin */}
       <Routes>
         <Route path="/" element={
           <>
-            {admin === null && 
-            <LoginForm 
-              username={username}
-              password={password}
-              setUsername={setUsername}
-              setPassword={setPassword}
-              handleLogin={handleLogin}
-              url={url}
-            />}
-            {admin !==  null && 
-            <AdminLogedInView 
-              handleLogout={handleLogout}
-              userIsAdmin= {userIsAdmin}
-              handleAdminBtn={handleAdminBtn}
-            />}
+            <Home 
+              message={message}
+            />
           </>
         } /> 
 
@@ -166,6 +142,23 @@ const App = () => {
 
         <Route path="/google-success" element={
           <GoogleSuccess setUser={setUser} setUserIsAdmin={setUserIsAdmin} />
+        } />
+
+        <Route path="/login" element={
+          <>
+            <LoginForm 
+              username={username}
+              password={password}
+              setUsername={setUsername}
+              setPassword={setPassword}
+              handleLogin={handleLogin}
+              url={url}
+            />
+          </>
+        } />
+
+        <Route path='/buymeacoffee' element={
+          <Checkout />
         } />
 
         <Route path="/users" element={<AdminPanel handleDeleteUser={handleDeleteParticipant} url={url} />} />
