@@ -126,6 +126,15 @@ const App = () => {
           </>
         } /> 
 
+        <Route path="/cancel" element={
+          <>
+            <Home 
+              message={message}
+              setMessage={setMessage}
+            />
+          </>
+        } /> 
+
         <Route path="/admin" element={
           <>
             <ProtectedRoute admin={admin} requiredRole="admin"></ProtectedRoute>
