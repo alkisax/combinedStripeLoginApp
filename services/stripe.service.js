@@ -15,8 +15,16 @@ const createCheckoutSession = async (price_id) => {
       },
     ],
     mode: 'payment',
-    success_url: `${BACKEND_URL}/success?success=true&session_id={CHECKOUT_SESSION_ID}`,
+    // added to get the participant info from front to be able to create a new transaction
+    // success_url: `${BACKEND_URL}/success?success=true&session_id={CHECKOUT_SESSION_ID}`,
+    success_url: `${BACKEND_URL}/success?success=true&session_id={CHECKOUT_SESSION_ID}&name=${participantInfo.name}&surname=${participantInfo.surname}&email=${participantInfo.email}`,
     cancel_url: `${FRONTEND_URL}/cancel?canceled=true`,
+    // added to get the participant info from front to be able to create a new transaction
+    metadata: {
+      name: participantInfo.name,
+      surname: participantInfo.surname,
+      email: participantInfo.email
+    }
   });
 };
 

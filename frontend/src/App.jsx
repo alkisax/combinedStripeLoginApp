@@ -15,6 +15,7 @@ import ProtectedRoute from './services/ProtectedRoute'
 import UserDetail from './components/UserDetail'
 import Appbar from './components/Appbar'
 import Home from './components/Home'
+import Participantinfoform from './components/ParticipantInfoForm'
 
 const url = 'http://localhost:3000/api'
 
@@ -27,6 +28,7 @@ const App = () => {
   const [users, setUsers] = useState([])
   const [participants, setParticipants] = useState([])
   const [admin, setAdmin] = useState(null)
+  const [newParticipant, setNewParticipant] = useState(null)
 
   const navigate = useNavigate()
   
@@ -167,7 +169,17 @@ const App = () => {
         } />
 
         <Route path='/buymeacoffee' element={
-          <Checkout />
+          // <Checkout />
+          <Participantinfoform 
+            // newParticipant={newParticipant}
+            setNewParticipant={setNewParticipant}
+          />
+        } />
+
+        <Route path='/checkout' element={
+          <Checkout 
+            // newParticipant={newParticipant}
+          />
         } />
 
         <Route path="/users" element={<AdminPanel handleDeleteUser={handleDeleteParticipant} url={url} />} />

@@ -17,25 +17,25 @@ const createCheckoutSession = async (req, res) => {
 const handleSuccess = async (req, res) => {
   try {
     const sessionId = req.query.session_id;
-    if (!sessionId) {
+    const name = req.query.name;
+    const surname = req.query.surname;
+    const email = req.query.email;
+    if (!sessionId || !email) {
       return res.status(400).send('Missing session ID.');
     }
 
     const session = await stripeService.retrieveSession(sessionId);
 
     const amountTotal = session.amount_total / 100; // Stripe returns cents
-    const customerEmail = session.customer_details.email;
 
-    console.log(`Payment success for: ${customerEmail}, amount: ${amountTotal}`);
+    console.log(`Payment success for: ${email}, amount: ${amountTotal}`);
 
-    let participant = await participantDAO.findParticipantByEmail(customerEmail);
+    let participant = await participantDAO.findParticipantByEmail(email);
 
     if (!participant) {
       console.log('Participant not found, creating new one...');
-      await participantDAO.createParticipant({ email: customerEmail, name: 'Anonymous', surname: 'Donator' });
+      await participantDAO.createParticipant({ email: email, name: name, surname: surname });
     }
-
-    participant = await participantDAO.findParticipantByEmail(customerEmail);
 
     const newTransaction = await transactionDAO.createTransaction({
       amount: amountTotal,

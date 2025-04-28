@@ -5,9 +5,11 @@ import oneCoin from '../assets/handsMoneyCrop.jpg'
 import twoCoins from '../assets/two coins.jpg'
 import threeCoins from '../assets/three_coins.svg.png'
 
+// added to stripe boilerplate to extract new participant info from url
+import { useSearchParams } from 'react-router-dom'
+
 const PUBLIC_STRIPE_KEY = 'pk_live_51REuM3EsaPshQGwVZxSzQyBw2SJj4CnnSxuf6yWokbg5dRVAM0WpDFrIHnlF0sqQgykl4WVxCw5gA6bhDHWeyrFE00muoS3dkU'
 const BACKEND_URL = 'http://localhost:3000';
-// const BACKEND_URL = 'https://stripebasic.onrender.com';
 const PRICE_ID_050 = 'price_1RGPe4EsaPshQGwV6vXbMrhE'
 const PRICE_ID_051 = 'price_1RGkyMEsaPshQGwV7rsnw60y'
 const PRICE_ID_052 = 'price_1RGlWzEsaPshQGwVGwpZ9TSb'
@@ -15,10 +17,14 @@ const PRICE_ID_052 = 'price_1RGlWzEsaPshQGwVGwpZ9TSb'
 const stripePromise = loadStripe(`${PUBLIC_STRIPE_KEY}`)
 
 const Checkout = () => {
-  const handleCheckout = async (price_id) => {
+
+  // added to stripe boilerplate to extract new participant info from url
+  const [participantInfo] = useSearchParams()
+
+  const handleCheckout = async (price_id, participantInfo) => {
     try {
-      // const response = await axios.post(`${BACKEND_URL}/checkout/${price_id}`)
-      const response = await axios.post(`${BACKEND_URL}/api/stripe/checkout/${price_id}`)
+      // added participant info to be sent to back via url params
+      const response = await axios.post(`${BACKEND_URL}/api/stripe/checkout/${price_id}`, { participantInfo })
 
       const { id } = response.data
   
@@ -41,7 +47,7 @@ const Checkout = () => {
             <div className="card-body text-center">
               <h5 className="card-title">Donate 0.50€</h5>
               <p className="card-text">A small but mighty donation 🙏</p>
-              <button className="btn btn-primary" onClick={() => handleCheckout(PRICE_ID_050)}>Donate 0.50€</button>
+              <button className="btn btn-primary" onClick={() => handleCheckout(PRICE_ID_050, participantInfo)}>Donate 0.50€</button>
             </div>
           </div>
         </div>
@@ -75,14 +81,3 @@ const Checkout = () => {
 }
 
 export default Checkout
-
-
-
-  // return (
-  //   <div>
-  //     <h1>donate a few cents for test purpose</h1>
-  //     <button onClick={() => handleCheckout(`${PRICE_ID_050}`)}>Donate 0.5€</button>
-  //     <button onClick={() => handleCheckout(`${PRICE_ID_051}`)}>Donate 0.51€</button>
-  //     <button onClick={() => handleCheckout(`${PRICE_ID_052}`)}>Donate 0.52€</button>
-  //   </div>
-  // )

@@ -505,3 +505,297 @@ module.exports = {
   retrieveSession
 };
 ```
+# Note
+
+does this now works?
+user clicks buy me a coffee
+          <Nav.Link as={Link} to="/buymeacoffee" style={padding}>
+            Buy me a coffee
+          </Nav.Link>
+transfers to participantinfoform
+        <Route path='/buymeacoffee' element={
+          // <Checkout />
+          <Participantinfoform 
+            // newParticipant={newParticipant}
+            setNewParticipant={setNewParticipant}
+          />
+        } />
+there gives name surname and email and this are passed as url params to checkout
+const ParticipantInfoForm = ({ setNewParticipant }) => {
+
+  const navigate = useNavigate()
+
+  const handleSubmitParticipant = async (event) => {
+    const name = event.target.name.value
+    const surname = event.target.surname.value
+    const email = event.target.email.value
+
+    if (!email) {
+      alert('please enter your email')
+    }
+
+    setNewParticipant({
+      name: name,
+      surname: surname,
+      email: email
+    })
+
+    // Create a query string from the newParticipant object
+    const params = new URLSearchParams({
+      name: name,
+      surname: surname,
+      email: email,
+    }).toString()
+
+    navigate(/checkout?${params})
+  }
+
+
+in chceckout added  (im not sure about this part)
+import { useSearchParams } from 'react-router-dom'
+  const [participantInfo] = useSearchParams()
+
+participant info is added also to button
+      <div className="row justify-content-center">
+        {/* Card 1 */}
+        <div className="col-12 col-sm-4 mb-4">
+          <div className="card border border-white p-3 h-100">
+            <img src={oneCoin} className="card-img-top" alt="Donate 0.50€" />
+            <div className="card-body text-center">
+              <h5 className="card-title">Donate 0.50€</h5>
+              <p className="card-text">A small but mighty donation 🙏</p>
+              <button className="btn btn-primary" onClick={() => handleCheckout(PRICE_ID_050, participantInfo)}>Donate 0.50€</button>
+            </div>
+          </div>
+        </div>
+
+when clicked
+  const handleCheckout = async (price_id, participantInfo) => {
+    try {
+      // added participant info to be sent to back via url params
+      const response = await axios.post(${BACKEND_URL}/api/stripe/checkout/${price_id}, { participantInfo })
+
+      const { id } = response.data
+  
+      const stripe = await stripePromise
+      await stripe.redirectToCheckout({ sessionId: id })
+    } catch (error) {
+      console.log(error)
+    }
+  }
+
+this calls the back
+router.post('/checkout/:price_id', stripeController.createCheckoutSession);
+
+in the controller
+const handleSuccess = async (req, res) => {
+  try {
+    const sessionId = req.query.session_id;
+    const name = req.query.name;
+    const surname = req.query.surname;
+    const email = req.query.email;
+    if (!sessionId || !email) {
+      return res.status(400).send('Missing session ID.');
+    }
+
+    const session = await stripeService.retrieveSession(sessionId);
+
+    const amountTotal = session.amount_total / 100; // Stripe returns cents
+
+    console.log(Payment success for: ${email}, amount: ${amountTotal});
+
+    let participant = await participantDAO.findParticipantByEmail(email);
+
+    if (!participant) {
+      console.log('Participant not found, creating new one...');
+      await participantDAO.createParticipant({ email: email, name: name, surname: surname });
+    }
+
+    const newTransaction = await transactionDAO.createTransaction({
+      amount: amountTotal,
+      processed: true,
+      participant: participant._id
+    });
+
+    await participantDAO.addTransactionToParticipant(participant._id, newTransaction._id);
+
+    return res.send('Success! Your donation was recorded. Thank you!');
+  } catch (error) {
+    console.error('Error processing success route:', error.message);
+    return res.status(500).send('Something went wrong.');
+  }
+};
+
+which also use a service which passes to the controller as params the participant info to be used in the creation of the transaction
+
+const createCheckoutSession = async (price_id) => {
+  const BACKEND_URL = process.env.YOUR_DOMAIN || 'http://localhost:3000';
+  const FRONTEND_URL = process.env.FRONTEND_URL || 'http://http://localhost:5173'
+  return await stripe.checkout.sessions.create({
+    payment_method_types: ['card'],
+    line_items: [
+      {
+        price: price_id,
+        quantity: QUANTITY,
+      },
+    ],
+    mode: 'payment',
+    // added to get the participant info from front to be able to create a new transaction
+    // success_url: ${BACKEND_URL}/success?success=true&session_id={CHECKOUT_SESSION_ID},
+    success_url: ${BACKEND_URL}/success?success=true&session_id={CHECKOUT_SESSION_ID}&name=${participantInfo.name}&surname=${participantInfo.surname}&email=${participantInfo.email},
+    cancel_url: ${FRONTEND_URL}/cancel?canceled=true,
+    // added to get the participant info from front to be able to create a new transaction
+    metadata: {
+      name: participantInfo.name,
+      surname: participantInfo.surname,
+      email: participantInfo.email
+    }
+  });
+};
+
+
+
+Το ChatGPT είπε:
+Yes, with the changes you’ve described, it looks like your donation flow should now work as expected, but let me summarize and point out any areas that might need further clarification or adjustments:
+
+Flow Overview:
+User Clicks "Buy Me A Coffee":
+
+The user is navigated to the /buymeacoffee page where the ParticipantInfoForm component is rendered.
+
+The participant fills in their name, surname, and email.
+
+User Submits Form:
+
+The form sends the participant information (name, surname, email) via the navigate() method, passing the data as URL query parameters to the /checkout route.
+
+Checkout Page:
+
+On the /checkout page, you retrieve the participant information using useSearchParams().
+
+When the user clicks the "Donate 0.50€" button, the handleCheckout function is called, passing both the price ID and the participant’s info to the backend.
+
+Backend:
+
+The backend receives the price_id and participant information in the request.
+
+The backend creates a Stripe checkout session, passing the participant information as metadata in the session creation.
+
+The backend also generates a success URL, including the session ID and participant info as query parameters.
+
+Stripe Checkout:
+
+Stripe handles the payment, and upon success, the user is redirected back to your backend's /success route with the session ID and participant info.
+
+Handle Success:
+
+The backend uses the session ID and participant info (either from query params or session metadata) to find or create the participant in the database.
+
+A new transaction is created for the participant based on the payment amount, and the transaction is linked to the participant.
+
+The user is shown a success message.
+
+Things to Verify:
+Passing Participant Info to handleCheckout:
+
+You are correctly passing the participantInfo to the handleCheckout function from the /checkout page. This info should then be sent to the backend correctly via the POST request.
+
+Metadata in Stripe Checkout Session:
+
+You are including the participant’s name, surname, and email in the metadata of the Stripe session. This will be useful for referencing the participant in the backend after the payment.
+
+Potential issue: In your createCheckoutSession function, you are trying to use participantInfo in the session creation code, but participantInfo might not be available directly in that function. You should ensure that participantInfo is correctly passed as an argument to createCheckoutSession when it is called.
+
+javascript
+Αντιγραφή
+Επεξεργασία
+const createCheckoutSession = async (price_id, participantInfo) => {
+  return await stripe.checkout.sessions.create({
+    payment_method_types: ['card'],
+    line_items: [
+      {
+        price: price_id,
+        quantity: 1,
+      },
+    ],
+    mode: 'payment',
+    success_url: `${BACKEND_URL}/success?success=true&session_id={CHECKOUT_SESSION_ID}&name=${participantInfo.name}&surname=${participantInfo.surname}&email=${participantInfo.email}`,
+    cancel_url: `${FRONTEND_URL}/cancel?canceled=true`,
+    metadata: {
+      name: participantInfo.name,
+      surname: participantInfo.surname,
+      email: participantInfo.email
+    }
+  });
+};
+When calling this function from the frontend, ensure that you're passing participantInfo like so:
+
+javascript
+Αντιγραφή
+Επεξεργασία
+const handleCheckout = async (price_id, participantInfo) => {
+  try {
+    const response = await axios.post(`${BACKEND_URL}/api/stripe/checkout/${price_id}`, { participantInfo });
+    const { id } = response.data;
+    const stripe = await stripePromise;
+    await stripe.redirectToCheckout({ sessionId: id });
+  } catch (error) {
+    console.log(error);
+  }
+};
+Query Parameters vs Metadata:
+
+You are passing participant info both as URL parameters (name, surname, email) and as metadata in the Stripe session. This is fine, but you should decide which one you prefer to use for processing after the success. Query parameters are simple, but metadata is more secure because it's associated directly with the Stripe session.
+
+Handling Success:
+
+In the handleSuccess function, you're retrieving the participant information from query parameters (req.query.name, req.query.email, etc.). You also could retrieve it from the Stripe session metadata, which is a more reliable source if you're handling the info at the session creation step.
+
+Here's how you could retrieve it from the session metadata (rather than query params):
+
+javascript
+Αντιγραφή
+Επεξεργασία
+const handleSuccess = async (req, res) => {
+  try {
+    const sessionId = req.query.session_id;
+    if (!sessionId) {
+      return res.status(400).send('Missing session ID.');
+    }
+
+    const session = await stripeService.retrieveSession(sessionId);
+    const { name, surname, email } = session.metadata;  // From metadata, not query params
+
+    const amountTotal = session.amount_total / 100; // Stripe returns cents
+
+    console.log(`Payment success for: ${email}, amount: ${amountTotal}`);
+
+    let participant = await participantDAO.findParticipantByEmail(email);
+
+    if (!participant) {
+      console.log('Participant not found, creating new one...');
+      participant = await participantDAO.createParticipant({ email: email, name: name, surname: surname });
+    }
+
+    const newTransaction = await transactionDAO.createTransaction({
+      amount: amountTotal,
+      processed: true,
+      participant: participant._id
+    });
+
+    await participantDAO.addTransactionToParticipant(participant._id, newTransaction._id);
+
+    return res.send('Success! Your donation was recorded. Thank you!');
+  } catch (error) {
+    console.error('Error processing success route:', error.message);
+    return res.status(500).send('Something went wrong.');
+  }
+};
+Summary:
+Ensure that participantInfo is correctly passed from the frontend to the backend when creating the Stripe session.
+
+Handle both query parameters and metadata carefully. The metadata can be a more reliable source of participant info.
+
+Consider using metadata to retrieve participant info on success, rather than passing it via query parameters.
+
+With these clarifications and corrections, your flow should work as expected! Let me know if you have further questions or if something doesn't seem to work.
