@@ -1,12 +1,42 @@
-/* eslint-disable no-unused-vars */
-import { useEffect } from 'react'
+import { useState,useEffect } from 'react'
+import axios from 'axios'
 import { useSearchParams } from 'react-router-dom'
 
-const Home = ({ message, setMessage }) => {
+const Home = ({ message, setMessage, url }) => {
+  // επρεπε να γίνει γιατι καλούσε το success 2 φορες δημιουργώντας 2 transactions
+  const [hasCalledSuccess, setHasCalledSuccess] = useState(false);
 
   const [searchParams] = useSearchParams()
   useEffect(() => {
     const canceled = searchParams.get('canceled'); 
+    const success = searchParams.get('success')
+    // added to manage to call stripe.controller.js handlesucces from frontend
+    const sessionId = searchParams.get('session_id');
+    console.log("sessionId", sessionId);
+    
+
+    if (success === 'true' && sessionId && !hasCalledSuccess){
+      // επρεπε να φτιαξω μια νεα function γιατι το axios δεν δουλευε αλλιώς
+      const fetchSuccess = async () => {
+        try {
+          const result = await axios.get(`${url}/stripe/success?session_id=${sessionId}`)
+          console.log("Success response:", result.data);
+          // για να εμποδίσει επανάληψη της κλήσης
+          // το απλό setHasCalledSuccess δεν δουλευε γιατι είναι ασυγχρονο
+          setHasCalledSuccess(prevState => {
+            if (!prevState) {
+              return true;  // only update if the previous state was false
+            }
+            return prevState;
+          });
+        } catch (error) {
+          console.error ("Error handling success:", error)
+        }
+      }
+      fetchSuccess()
+      setMessage(`Payment successful! thank you! :)
+                  you will soon receive an email with the details`)
+    }
 
     if (canceled === 'true') {
       setMessage('Payment canceled! :(');
@@ -15,14 +45,7 @@ const Home = ({ message, setMessage }) => {
       }, 7000); 
     }
 
-    const success = searchParams.get('success')
-    if (success === 'true') {
-      setMessage('Donation successful! thank you! :)');
-      setTimeout(() => {
-        setMessage('');
-      }, 7000); 
-    }
-  }, [searchParams, setMessage])
+  }, [searchParams, setMessage, hasCalledSuccess, url])
 
   return (
     <>

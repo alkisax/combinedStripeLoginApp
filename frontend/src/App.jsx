@@ -124,6 +124,8 @@ const App = () => {
           <>
             <Home 
               message={message}
+              setMessage={setMessage}
+              url={url}
             />
           </>
         } /> 
@@ -133,6 +135,17 @@ const App = () => {
             <Home 
               message={message}
               setMessage={setMessage}
+              url={url}
+            />
+          </>
+        } />
+
+        <Route path="/success" element={
+          <>
+            <Home 
+              message={message}
+              setMessage={setMessage}
+              url={url}
             />
           </>
         } /> 

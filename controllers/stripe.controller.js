@@ -17,37 +17,61 @@ const createCheckoutSession = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
-
+// test url http://localhost:5173//api/stripe/success?success=true&session_id=cs_live_a1mkTS6fqvKZOmhtC9av3fmJoVGLpTae5WARcA3vclGPqs1CgNUzRxm5iu
+// test url http://localhost:5173/success?success=true&session_id=cs_live_a1n8TEyTBIrIsdg1taD0a2TjB5QaiCWTWSlGF6sslVeqXSnQgykb9yHDyp
+// test url http://localhost:5173/success?success=true&session_id=cs_live_a16HqUdBc0VjlzlhfxfzMCDML6jYuvKoSXYusUdEwcTOO3RKCuperj2RB7
 const handleSuccess = async (req, res) => {
   try {
+    // συλλέγω διάφορα δεδομένα του χρήστη απο το url του success
     const sessionId = req.query.session_id;
-    const name = req.query.name;
-    const surname = req.query.surname;
-    const email = req.query.email;
-    if (!sessionId || !email) {
+    if (!sessionId) {
       return res.status(400).send('Missing session ID.');
     }
 
+    // δεν είμαι σιγουρος τι κανει. αλλα μάλλον κάνει await το response
     const session = await stripeService.retrieveSession(sessionId);
 
+    const name = session.metadata.name
+    const surname = session.metadata.surname
+    const email  = session.metadata.email 
+
+    if (!email) {
+      return res.status(400).send('Missing session ID.');
+    }
+
+    // κάνω τα ευρώ σέντς
     const amountTotal = session.amount_total / 100; // Stripe returns cents
 
     console.log(`Payment success for: ${email}, amount: ${amountTotal}`);
 
+    // ψαχνω τον participant απο το ημαιλ του για να τον ανανεώσω αν υπάρχει ή ν α τον δημιουργήσω
     let participant = await participantDAO.findParticipantByEmail(email);
+
+    if (participant) {
+      console.log(`Participant ${participant.email} found`);      
+    }
 
     if (!participant) {
       console.log('Participant not found, creating new one...');
-      await participantDAO.createParticipant({ email: email, name: name, surname: surname });
+      // δημιουργία νεου participant
+      participant = await participantDAO.createParticipant({ email: email, name: name, surname: surname });
     }
 
+    // δημιουργία transaction
     const newTransaction = await transactionDAO.createTransaction({
       amount: amountTotal,
-      processed: true,
+      processed: false,
       participant: participant._id
     });
+    console.log("new transaction>>>", newTransaction);
 
-    await participantDAO.addTransactionToParticipant(participant._id, newTransaction._id);
+    // push the new transaction’s _id into the participant’s transactions array
+    await participantDAO.addTransactionToParticipant(
+      participant._id,
+      newTransaction._id
+    );
+    console.log(`Added transaction ${newTransaction._id} to participant ${participant._id}`);
+    
 
     return res.send('Success! Your donation was recorded. Thank you!');
   } catch (error) {

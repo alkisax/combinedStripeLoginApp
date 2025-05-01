@@ -26,7 +26,8 @@ const createCheckoutSession = async (price_id, participantInfo = {}) => {
     ],
     mode: 'payment',
 
-    success_url: `${BACKEND_URL}/success?success=true&session_id={CHECKOUT_SESSION_ID}`,
+    // success_url: `${BACKEND_URL}/success?success=true&session_id={CHECKOUT_SESSION_ID}`,
+    success_url: `${FRONTEND_URL}/success?success=true&session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${FRONTEND_URL}/cancel?canceled=true`,
     metadata: metadata
 

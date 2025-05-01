@@ -799,3 +799,239 @@ Handle both query parameters and metadata carefully. The metadata can be a more 
 Consider using metadata to retrieve participant info on success, rather than passing it via query parameters.
 
 With these clarifications and corrections, your flow should work as expected! Let me know if you have further questions or if something doesn't seem to work.
+
+# new payment and new transaction
+
+```
+will thsi work now? im gona use real money again
+
+front App.jsx
+        <Route path="/cancel" element={
+          <>
+            <Home 
+              message={message}
+              setMessage={setMessage}
+            />
+          </>
+        } />
+
+        <Route path="/success" element={
+          <>
+            <Home 
+              message={message}
+              setMessage={setMessage}
+            />
+          </>
+        } /> 
+
+Home.jsx
+import { useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
+
+const Home = ({ message, setMessage }) => {
+
+  const [searchParams] = useSearchParams()
+  useEffect(() => {
+    const canceled = searchParams.get('canceled'); 
+    const success = searchParams.get('success')
+
+    if (success === 'true'){
+      setMessage(`Payment successful! thank you! :)
+                  you will soon receive an email with the details`)
+    }
+
+    if (canceled === 'true') {
+      setMessage('Payment canceled! :(');
+      setTimeout(() => {
+        setMessage('');
+      }, 7000); 
+    }
+
+  }, [searchParams, setMessage])
+
+ParticipantInfoForm.jsx
+        <Form onSubmit={handleSubmitParticipant}>
+[...}
+  const handleSubmitParticipant = async (event) => {
+    const name = event.target.name.value
+    const surname = event.target.surname.value
+    const email = event.target.email.value
+
+    if (!email) {
+      alert('please enter your email')
+    }
+
+    setNewParticipant({
+      name: name,
+      surname: surname,
+      email: email
+    })
+
+    // Create a query string from the newParticipant object
+    const params = new URLSearchParams({
+      name: name,
+      surname: surname,
+      email: email,
+    }).toString()
+
+    navigate(`/checkout?${params}`)
+  }
+
+Checkout.jsx
+        {/* Card 3 */}
+        <div className="col-12 col-sm-4 mb-4">
+          <div className="card border border-white p-3 h-100">
+            <img src={threeCoins} className="card-img-top" alt="Donate 0.52€" />
+            <div className="card-body text-center">
+              <h5 className="card-title">Donate 0.52€</h5>
+              <p className="card-text">Wow, you're a hero! 💪</p>
+              <button className="btn btn-warning" onClick={() => handleCheckout(PRICE_ID_052)}>Donate 0.52€</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+[...}
+  const handleCheckout = async (price_id) => {
+    const participantInfo = { 
+      name: searchParams.get('name'),
+      surname: searchParams.get('surname'),  
+      email: searchParams.get('email'),
+    };
+    console.log("participant info>>>", participantInfo);
+    console.log(">>> button clicked, price_id =", price_id)
+
+    try {
+      // added participant info to be sent to back via url params
+      const response = await axios.post(`${BACKEND_URL}/api/stripe/checkout/${price_id}`, { participantInfo })
+
+      const { id } = response.data
+  
+      const stripe = await stripePromise
+      await stripe.redirectToCheckout({ sessionId: id })
+    } catch (error) {
+      console.log(error)
+    }
+  }
+
+stripe.routes.js
+router.post('/checkout/:price_id', stripeController.createCheckoutSession);
+router.get('/success', stripeController.handleSuccess);
+router.get('/cancel', stripeController.handleCancel);
+
+stripe controller.js
+const createCheckoutSession = async (req, res) => {
+  const price_id = req.params.price_id;
+  // added to catch participant url params
+  const participantInfo = req.body.participantInfo;
+
+
+  try {
+    // added to catch participant url params
+    const session = await stripeService.createCheckoutSession(price_id, participantInfo);
+    res.json(session);
+  } catch (error) {
+    console.error('Error creating checkout session:', error.message);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+stripeService.js
+const Stripe = require('stripe');
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+const express = require('express');
+
+const QUANTITY = 1; // just number not string
+
+const createCheckoutSession = async (price_id, participantInfo = {}) => {
+  const BACKEND_URL = process.env.YOUR_DOMAIN || 'http://localhost:3000';
+  const FRONTEND_URL = process.env.FRONTEND_URL || 'http://http://localhost:5173'
+
+  // added to get the participant info from front to be able to create a new transaction
+  const metadata = {
+    name: participantInfo.name || '',
+    surname: participantInfo.surname || '',
+    email: participantInfo.email
+  }
+  console.log('Creating checkout session with metadata:', metadata);
+
+  return await stripe.checkout.sessions.create({
+    payment_method_types: ['card'],
+    line_items: [
+      {
+        price: price_id,
+        quantity: QUANTITY,
+      },
+    ],
+    mode: 'payment',
+
+    // success_url: `${BACKEND_URL}/success?success=true&session_id={CHECKOUT_SESSION_ID}`,
+    success_url: `${BACKEND_URL}/api/stripe/success?success=true&session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${FRONTEND_URL}/cancel?canceled=true`,
+    metadata: metadata
+
+  });
+};
+
+const retrieveSession = async (sessionId) => {
+  return await stripe.checkout.sessions.retrieve(sessionId);
+};
+
+module.exports = {
+  createCheckoutSession,
+  retrieveSession
+};
+
+stripe.controller.js
+const handleSuccess = async (req, res) => {
+  try {
+    // συλλέγω διάφορα δεδομένα του χρήστη απο το url του success
+    const sessionId = req.query.session_id;
+    if (!sessionId) {
+      return res.status(400).send('Missing session ID.');
+    }
+
+    // δεν είμαι σιγουρος τι κανει. αλλα μάλλον κάνει await το response
+    const session = await stripeService.retrieveSession(sessionId);
+
+    const name = session.metadata.name
+    const surname = session.metadata.surname
+    const email  = session.metadata.email 
+
+    // αυτα τα δυο είναι που είναι υπχρεωτικα
+    if (!email) {
+      return res.status(400).send('Missing session ID.');
+    }
+
+    // κάνω τα ευρώ σέντς
+    const amountTotal = session.amount_total / 100; // Stripe returns cents
+
+    console.log(`Payment success for: ${email}, amount: ${amountTotal}`);
+
+    // ψαχνω τον participant απο το ημαιλ του για να τον ανανεώσω αν υπάρχει ή ν α τον δημιουργήσω
+    let participant = await participantDAO.findParticipantByEmail(email);
+
+    if (!participant) {
+      console.log('Participant not found, creating new one...');
+      // δημιουργία νεου participant
+      await participantDAO.createParticipant({ email: email, name: name, surname: surname });
+    }
+
+    // δημιουργία transaction
+    const newTransaction = await transactionDAO.createTransaction({
+      amount: amountTotal,
+      processed: true,
+      participant: participant._id
+    });
+    console.log("new transaction>>>", newTransaction);
+    
+
+    return res.send('Success! Your donation was recorded. Thank you!');
+  } catch (error) {
+    console.error('Error processing success route:', error.message);
+    return res.status(500).send('Something went wrong.');
+  }
+};
+```
+will this work? will this create me a new transaction?
