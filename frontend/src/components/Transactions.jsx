@@ -31,8 +31,20 @@ const Transactions =  ({ url }) => {
     setShowAll(!showAll)
   }
 
-  const markProcessed = async (transactionId) => {
-
+  const markProcessed = async (transactionId, isProcessed) => {
+        try {
+          const token = localStorage.getItem("token")
+          const response = await axios.get(`${url}/transaction`, {
+            headers: {
+              Authorization: `Bearer ${token}`
+            }
+          })
+          setTransactions(response.data.data)
+          setLoading(false)
+        } catch (error) {
+          console.error("Error fetching transactions:", error)
+          setLoading(false)
+        }
   }
 
   return (
@@ -49,7 +61,7 @@ const Transactions =  ({ url }) => {
             return (
               <li key={transactions._id}>
               {participant?.name || 'No Name'} - {participant?.surname || 'No Surname'} - {participant?.email || 'No Email'} - €{transaction.amount}  - {transaction.processed ? 'Processed' : 'Unprocessed'} - {new Date(transaction.createdAt).toLocaleString()}
-              <button id='markProcessedBtn' onClick={markProcessed}>{transaction.processed ? 'mark unprocessed' : 'mark processed'} </button>
+              <button id='markProcessedBtn' onClick={() => markProcessed(transaction._id, transaction.processed)}>{transaction.processed ? 'mark unprocessed' : 'mark processed'} </button>
               </li>
             )
           })

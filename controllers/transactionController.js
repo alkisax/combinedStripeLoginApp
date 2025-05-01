@@ -62,6 +62,43 @@ exports.create = async (req,res) => {
   }
 }
 
+exports.toggleProcessed = async (req,res) => {
+  const transactionId = req.params.id
+  if (!transactionId){
+    return res.status(400).json({
+      status: false,
+      error: 'transaction ID is required OR not found'
+    })
+  }
+
+  try {
+    const transaction = await transactionDAO.findTransactionById(transactionId);
+
+    if (!transaction) {
+      return res.status(404).json({
+        status: false,
+        error: 'Transaction not found',
+      });
+    }
+
+    const updatedData = {
+      processed: !transaction.processed
+    }
+
+    const updatedTransaction = await transactionDAO.updateTransactionById(transactionId, updatedData)
+    res.json({
+      status: true,
+      data: updatedTransaction,
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      status:false,
+      error: error.message
+    })
+  }
+}
+
 exports.deleteById = async (req, res) => {
   const transactionId = req.params.id
   if (!transactionId){
