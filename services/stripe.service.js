@@ -4,9 +4,17 @@ const express = require('express');
 
 const QUANTITY = 1; // just number not string
 
-const createCheckoutSession = async (price_id) => {
+const createCheckoutSession = async (price_id, participantInfo = {}) => {
   const BACKEND_URL = process.env.YOUR_DOMAIN || 'http://localhost:3000';
   const FRONTEND_URL = process.env.FRONTEND_URL || 'http://http://localhost:5173'
+
+  // added to get the participant info from front to be able to create a new transaction
+  const metadata = {
+    name: participantInfo.name || '',
+    surname: participantInfo.surname || '',
+    email: participantInfo.email
+  }
+  console.log('Creating checkout session with metadata:', metadata);
 
   return await stripe.checkout.sessions.create({
     payment_method_types: ['card'],
@@ -18,16 +26,10 @@ const createCheckoutSession = async (price_id) => {
     ],
     mode: 'payment',
 
-    // added to get the participant info from front to be able to create a new transaction
     success_url: `${BACKEND_URL}/success?success=true&session_id={CHECKOUT_SESSION_ID}`,
-    // success_url: `${BACKEND_URL}/success?success=true&session_id={CHECKOUT_SESSION_ID}&name=${participantInfo.name}&surname=${participantInfo.surname}&email=${participantInfo.email}`,
     cancel_url: `${FRONTEND_URL}/cancel?canceled=true`,
-    // added to get the participant info from front to be able to create a new transaction
-    // metadata: {
-    //   name: participantInfo.name,
-    //   surname: participantInfo.surname,
-    //   email: participantInfo.email
-    // }
+    metadata: metadata
+
   });
 };
 

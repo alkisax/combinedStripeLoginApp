@@ -4,9 +4,13 @@ const participantDAO = require('../daos/participant.dao');
 
 const createCheckoutSession = async (req, res) => {
   const price_id = req.params.price_id;
+  // added to catch participant url params
+  const participantInfo = req.body.participantInfo;
+
 
   try {
-    const session = await stripeService.createCheckoutSession(price_id);
+    // added to catch participant url params
+    const session = await stripeService.createCheckoutSession(price_id, participantInfo);
     res.json(session);
   } catch (error) {
     console.error('Error creating checkout session:', error.message);
