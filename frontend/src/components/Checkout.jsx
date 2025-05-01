@@ -17,19 +17,18 @@ const PRICE_ID_052 = 'price_1RGlWzEsaPshQGwVGwpZ9TSb'
 const stripePromise = loadStripe(`${PUBLIC_STRIPE_KEY}`)
 
 const Checkout = () => {
-
   // added to stripe boilerplate to extract new participant info from url
   const [searchParams] = useSearchParams()
 
-  const participantInfo = { 
-    name: searchParams.get('name'),
-    surname: searchParams.get('surname'),  // <--- added
-    email: searchParams.get('email'),
-  };
-  console.log("participant info>>>", participantInfo);
-  
+  const handleCheckout = async (price_id) => {
+    const participantInfo = { 
+      name: searchParams.get('name'),
+      surname: searchParams.get('surname'),  
+      email: searchParams.get('email'),
+    };
+    console.log("participant info>>>", participantInfo);
+    console.log(">>> button clicked, price_id =", price_id)
 
-  const handleCheckout = async (price_id, participantInfo) => {
     try {
       // added participant info to be sent to back via url params
       const response = await axios.post(`${BACKEND_URL}/api/stripe/checkout/${price_id}`, { participantInfo })
@@ -67,8 +66,7 @@ const Checkout = () => {
             <div className="card-body text-center">
               <h5 className="card-title">Donate 0.50€</h5>
               <p className="card-text">A small but mighty donation 🙏</p>
-              <button className="btn btn-primary" onClick={() => handleCheckout(PRICE_ID_050, participantInfo)}>Donate 0.50€</button>
-              {/* <button className="btn btn-primary" onClick={() => handleCheckout(PRICE_ID_050)}>Donate 0.50€</button> */}
+              <button className="btn btn-primary" onClick={() => handleCheckout(PRICE_ID_050)}>Donate 0.50€</button>
             </div>
           </div>
         </div>
