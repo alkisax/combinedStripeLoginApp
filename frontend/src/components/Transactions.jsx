@@ -31,20 +31,27 @@ const Transactions =  ({ url }) => {
     setShowAll(!showAll)
   }
 
-  const markProcessed = async (transactionId, isProcessed) => {
-        try {
-          const token = localStorage.getItem("token")
-          const response = await axios.get(`${url}/transaction`, {
-            headers: {
-              Authorization: `Bearer ${token}`
-            }
-          })
-          setTransactions(response.data.data)
-          setLoading(false)
-        } catch (error) {
-          console.error("Error fetching transactions:", error)
-          setLoading(false)
+  const markProcessed = async (transactionId) => {
+    try {
+      const token = localStorage.getItem("token")
+      console.log("token: ", token);
+      
+
+      const response = await axios.put(`${url}/transaction/toggle/${transactionId}`,
+        {}, 
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
         }
+      )
+        const isProcessed = response.data.data.processed
+        console.log("transaction is processed?",isProcessed);
+        
+      setTransactions(response.data.data)
+    } catch (error) {
+      console.error("Error fetching transactions:", error)
+    }
   }
 
   return (
@@ -53,7 +60,7 @@ const Transactions =  ({ url }) => {
       {!loading && transactions.length === 0 && <p>No transactions found</p>}
       <button id='showAllBtnTransactions' onClick={toggleShowAll}>{showAll ? "show only unprocessed" : "show all" }</button>
       <ul>
-        {!loading && transactions.length !== 0 && 
+        {!loading && Array.isArray(transactions) && transactions.length !== 0 &&  
           transactions
           .filter(t => showAll || !t.processed)
           .map((transaction) => {
@@ -61,7 +68,7 @@ const Transactions =  ({ url }) => {
             return (
               <li key={transactions._id}>
               {participant?.name || 'No Name'} - {participant?.surname || 'No Surname'} - {participant?.email || 'No Email'} - €{transaction.amount}  - {transaction.processed ? 'Processed' : 'Unprocessed'} - {new Date(transaction.createdAt).toLocaleString()}
-              <button id='markProcessedBtn' onClick={() => markProcessed(transaction._id, transaction.processed)}>{transaction.processed ? 'mark unprocessed' : 'mark processed'} </button>
+              <button id='markProcessedBtn' onClick={() => markProcessed(transaction._id)}>{transaction.processed ? 'mark unprocessed' : 'mark processed'} </button>
               </li>
             )
           })
