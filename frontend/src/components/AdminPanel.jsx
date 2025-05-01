@@ -3,10 +3,11 @@ import { useState, useEffect  } from "react"
 import { Link } from 'react-router-dom'
 import axios from 'axios'
 import NewParticipantForm from './NewParticipantForm'
+import Transactions from './Transactions'
 
 const AdminPanel = ({url, handleDeleteParticipant, participants, setParticipants}) => {
   const [viewForm, setViewForm] = useState(false)
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const fetchParticipants = async () => {
@@ -33,6 +34,7 @@ const AdminPanel = ({url, handleDeleteParticipant, participants, setParticipants
     <div>
       <h2>Admin Panel</h2>
       <p>Only admins can see this.</p>
+      <Transactions url={url} />
       {loading && <p>Loading...</p>}
       {!loading && participants.length === 0 && <p>No participants found</p>}
       <ul>
