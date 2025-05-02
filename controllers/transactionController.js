@@ -2,6 +2,10 @@ const bcrypt = require('bcrypt')
 const Transaction = require('../models/transaction.models')
 const transactionDAO = require('../daos/transaction.dao')
 const participantDAO = require('../daos/participant.dao')
+const axios = require('axios')
+// const sendThnxEmail = require('../controllers/email.controller') // !!!
+
+BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:3000'
 
 exports.findAll = async (req,res) => {
   try {
@@ -86,11 +90,9 @@ exports.toggleProcessed = async (req,res) => {
     }
 
     const updatedTransaction = await transactionDAO.updateTransactionById(transactionId, updatedData)
-    res.json({
-      status: true,
-      data: updatedTransaction,
-    });
 
+    await axios.post(`${BACKEND_URL}/api/email/${transactionId}`)
+    res.status(200).json({ status: true, data: updatedTransaction})
   } catch (error) {
     res.status(500).json({
       status:false,

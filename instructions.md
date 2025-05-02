@@ -1035,3 +1035,154 @@ const handleSuccess = async (req, res) => {
 };
 ```
 will this work? will this create me a new transaction?
+
+
+```
+lets see it again
+
+i have this in  transactionController.js
+this checks if transactionId is ok, finds the transaction by id. if it doesnt exists -> error, else updates it.
+
+exports.toggleProcessed = async (req,res) => {
+  const transactionId = req.params.id
+  if (!transactionId){
+    return res.status(400).json({
+      status: false,
+      error: 'transaction ID is required OR not found'
+    })
+  }
+
+  try {
+    const transaction = await transactionDAO.findTransactionById(transactionId);
+
+    if (!transaction) {
+      return res.status(404).json({
+        status: false,
+        error: 'Transaction not found',
+      });
+    }
+
+    const updatedData = {
+      processed: !transaction.processed
+    }
+
+    const updatedTransaction = await transactionDAO.updateTransactionById(transactionId, updatedData)
+    res.json({
+      status: true,
+      data: updatedTransaction,
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      status:false,
+      error: error.message
+    })
+  }
+}
+
+after that and inside this function an email functionality should be called TODO
+in app.js added
+const emailRoutes = require('./routes/email.routes')
+
+app.use('/api/email', emailRoutes)
+
+created routes/email.routes.js which calles for controller passing transaction id
+
+const express = require('express');
+const router = express.Router();
+const emailController = require('../controllers/email.controller');
+
+router.post('/email/:transactionId', emailController.sendThnxEmail);
+
+module.exports = router;
+
+created email.controller.js
+const emailDAO = require('../daos/email.dao')
+const nodemailer = require("nodemailer");
+const transactionDAO = require('../daos/transaction.dao')
+
+exports.sendThnxEmail = async (req,res) => {
+  try {
+
+    const transactionId = req.params.id
+    const transaction = await transactionDAO.findTransactionById(transactionId)
+    const email= transaction.email
+
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+      },
+    });
+
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: email,
+      subject: "Thank You for Your Donation",
+      text: `Dear ${name},\n\nThank you for your generous donation! We greatly appreciate your support.\n\nBest regards,\nThe Team`,
+    };
+
+    const emailRecipt = await transporter.sendMail(mailOptions);
+    res.status(200).json({ status: true, data: emailRecipt });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ status: false, error: 'Thnx email Internal server error' });
+  }
+}
+
+this is the transactionDAO.findTransactionById
+// Find transaction by ID
+const findTransactionById = async (transactionId) => {
+  return await Transaction.findById(transactionId).populate('participant');
+};
+
+so iguess my transactionController.js becomes
+BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:3000'
+
+exports.toggleProcessed = async (req,res) => {
+  const transactionId = req.params.id
+  if (!transactionId){
+    return res.status(400).json({
+      status: false,
+      error: 'transaction ID is required OR not found'
+    })
+  }
+
+  try {
+    const transaction = await transactionDAO.findTransactionById(transactionId);
+
+    if (!transaction) {
+      return res.status(404).json({
+        status: false,
+        error: 'Transaction not found',
+      });
+    }
+
+    const updatedData = {
+      processed: !transaction.processed
+    }
+
+    const updatedTransaction = await transactionDAO.updateTransactionById(transactionId, updatedData)
+    res.json({
+      status: true,
+      data: updatedTransaction,
+    });
+
+    try {
+      const emailRecipt = await axios.post(`${BACKEND_URL}/api/email/${transactionId}`)
+      res.status(200).json({ status: true, data: emailRecipt})
+    } catch (error) {
+      console.error(error)
+      res.status(500).json({ status:false, error: 'thnx email internal server error'})
+    }
+
+
+  } catch (error) {
+    res.status(500).json({
+      status:false,
+      error: error.message
+    })
+  }
+} 
+```
