@@ -43,11 +43,16 @@ const addTransactionToParticipant = async (participantId, transactionId) => {
   ); //"Find the participant and push this new transactionId into their transactions array."
 };
 
+const findBySessionId = async (sessionId) => {
+  return await Transaction.findOne({ sessionId });
+};
+
 module.exports = {
   findAllTransactions,
   findTransactionById,
   createTransaction,
   deleteTransactionById,
   updateTransactionById,
-  findTransactionsByProcessed
+  findTransactionsByProcessed,
+  findBySessionId
 };

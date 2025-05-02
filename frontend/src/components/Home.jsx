@@ -1,10 +1,10 @@
-import { useState,useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import axios from 'axios'
 import { useSearchParams } from 'react-router-dom'
 
 const Home = ({ message, setMessage, url }) => {
   // επρεπε να γίνει γιατι καλούσε το success 2 φορες δημιουργώντας 2 transactions
-  const [hasCalledSuccess, setHasCalledSuccess] = useState(false);
+  const hasCalledSuccessRef = useRef(false);
 
   const [searchParams] = useSearchParams()
   useEffect(() => {
@@ -15,20 +15,14 @@ const Home = ({ message, setMessage, url }) => {
     console.log("sessionId", sessionId);
     
 
-    if (success === 'true' && sessionId && !hasCalledSuccess){
+    if (success === 'true' && sessionId && !hasCalledSuccessRef.current){
       // επρεπε να φτιαξω μια νεα function γιατι το axios δεν δουλευε αλλιώς
       const fetchSuccess = async () => {
         try {
           const result = await axios.get(`${url}/stripe/success?session_id=${sessionId}`)
           console.log("Success response:", result.data);
           // για να εμποδίσει επανάληψη της κλήσης
-          // το απλό setHasCalledSuccess δεν δουλευε γιατι είναι ασυγχρονο
-          setHasCalledSuccess(prevState => {
-            if (!prevState) {
-              return true;  // only update if the previous state was false
-            }
-            return prevState;
-          });
+          hasCalledSuccessRef.current = true;
         } catch (error) {
           console.error ("Error handling success:", error)
         }
@@ -45,7 +39,7 @@ const Home = ({ message, setMessage, url }) => {
       }, 7000); 
     }
 
-  }, [searchParams, setMessage, hasCalledSuccess, url])
+  }, [searchParams, setMessage, url])
 
   return (
     <>

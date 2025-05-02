@@ -28,6 +28,12 @@ const handleSuccess = async (req, res) => {
       return res.status(400).send('Missing session ID.');
     }
 
+    //prevent dublicate transactions
+    const existingTransaction = await transactionDAO.findBySessionId(sessionId);
+    if (existingTransaction) {
+      return res.status(200).send("Transaction already recorded.");
+    }
+
     // δεν είμαι σιγουρος τι κανει. αλλα μάλλον κάνει await το response
     const session = await stripeService.retrieveSession(sessionId);
 
