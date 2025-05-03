@@ -1,10 +1,284 @@
-- create back and front
-- install dipendances
-- add npm run dev to package
-- δημιουργία φακέλων routes models controllers services
-- δημιουργία admins.models.js, participant.models.js transaction.models.js
+# Οδηγίες δημιουργίας Combined Login Stripe Nodemailer App
 
-```javascript
+# αρχικοποίηση του back  και του Front
+
+### back
+
+```bash
+npm init
+npm install express
+npm install mongoose
+npm install dotenv
+npm install bcrypt
+npm install jsonwebtoken
+npm install swagger-ui-express
+npm install mongoose-to-swagger
+npm install swagger-jsdoc
+npm install winston
+npm install winston-daily-rotate-file
+npm install winston-mongodb
+npm install google-auth-library
+npm install axios
+npm install cors
+npm install morgan
+npm install express-async-errors
+npm install --save-dev nodemon
+npm install --save-dev supertest
+npm install --save-dev cross-env
+npm install prop-types
+npm install --save-dev jest @babel/preset-env @babel/preset-react eslint-plugin-jest
+npm install --save-dev deep-freeze
+```
+
+#### package.json
+```js
+{
+  "name": "combinedstripeloginapp",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "node --watch server.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "axios": "^1.8.4",
+    "bcrypt": "^5.1.1",
+    "cors": "^2.8.5",
+    "dotenv": "^16.5.0",
+    "express": "^5.1.0",
+    "google-auth-library": "^9.15.1",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.13.2",
+    "mongoose-to-swagger": "^1.5.1",
+    "morgan": "^1.10.0",
+    "nodemailer": "^6.10.1",
+    "prop-types": "^15.8.1",
+    "stripe": "^18.0.0",
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-express": "^5.0.1",
+    "winston": "^3.17.0",
+    "winston-daily-rotate-file": "^5.0.0",
+    "winston-mongodb": "^6.0.0"
+  },
+  "devDependencies": {
+    "@babel/preset-env": "^7.26.9",
+    "@babel/preset-react": "^7.26.3",
+    "cross-env": "^7.0.3",
+    "deep-freeze": "^0.0.1",
+    "eslint-plugin-jest": "^28.11.0",
+    "jest": "^29.7.0",
+    "nodemon": "^3.1.10",
+    "supertest": "^7.1.0"
+  }
+}
+```
+
+### Front
+```bash
+npm create vite@latest frontend -- --template react
+npm install
+npm install axios
+npm install react-bootstrap
+npm install react-router-dom
+```
+#### package.json
+```js
+{
+  "name": "frontend",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "lint": "eslint .",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@stripe/stripe-js": "^7.2.0",
+    "axios": "^1.8.4",
+    "bootstrap": "^5.3.5",
+    "react": "^19.0.0",
+    "react-bootstrap": "^2.10.9",
+    "react-dom": "^19.0.0",
+    "react-router-dom": "^7.5.1"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.22.0",
+    "@types/react": "^19.0.10",
+    "@types/react-dom": "^19.0.4",
+    "@vitejs/plugin-react": "^4.3.4",
+    "eslint": "^9.22.0",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "eslint-plugin-react-refresh": "^0.4.19",
+    "globals": "^16.0.0",
+    "vite": "^6.3.1"
+  }
+}
+```
+
+#### .env
+```
+MONGODB_URI = mongodb+srv://alkisax:{***}@cluster0.8ioq6.mongodb.net/combined?retryWrites=true&w=majority&appName=Cluster0
+MONGODB_TEST_URI = mongodb+srv://alkisax:{***}@cluster0.8ioq6.mongodb.net/combined_TEST?retryWrites=true&w=majority&appName=Cluster0
+
+BACK_END_PORT = 3001
+
+SECRET = ***
+JWT_SECRET=***
+
+GOOGLE_CLIENT_ID=***
+GOOGLE_CLIENT_SECRET=***
+REDIRECT_URI=http://localhost:3001/api/login/google/callback
+
+EMAIL_USER=alkisax@zohomail.eu
+EMAIL_PASS_USER=***
+EMAIL_PASS=***
+
+APP_URL=http://localhost:3001
+FRONTEND_URL=http://localhost:5173
+BACKEND_URL=http://localhost:3001
+
+STRIPE_SECRET_KEY=***
+```
+
+## βασικο boiler plate για back
+#### server.js
+```js
+require('dotenv').config();
+const mongoose = require('mongoose');
+const app = require('./app'); 
+
+const PORT = process.env.BACK_END_PORT || 3001
+
+mongoose.set('strictQuery', false);
+// συνδεση με την MongoDB
+mongoose.connect(process.env.MONGODB_URI)
+  .then(() => {
+    console.log('connected to MongoDB');
+    console.log('Routes setup complete. Starting server...');
+// εδώ είναι το βασικό listen PORT μου
+    app.listen(PORT, () => {
+      // το εκανα σαν λινκ για να είναι clickable
+      console.log(`Server running on port http://localhost:${PORT}`);
+    });
+  })
+  .catch((error) => {
+    console.error('error connecting to MongoDB:', error.message);
+  });
+```
+
+#### app.js
+```js
+// require('dotenv').config()
+const express = require('express')
+const cors = require('cors')
+// θα προστεθούν πολλα τέτοια endpoints οπως προχωρά η εφαρμογη
+const adminRoutes = require('./routes/admin.routes')
+
+// αυτό ειναι κάτι που ίσως μου χρειαστεί στο deploy και δεν το καταλαβαίνω καλα. (και παρακάτω μαζί με αυτό)
+// const path = require('path'); // requires explanation. added for rendering front page subpages
+
+const app = express()
+app.use(cors())
+app.use(express.json());
+
+// ενας logger για να καταγράφει το backend τις κλήσεις
+app.use((req, res, next) => {
+  console.log("Request reached Express!");
+  console.log(`Incoming request: ${req.method} ${req.path}`);
+  next();
+});
+
+// θα προστεθούν πολλα τέτοια endpoints οπως προχωρά η εφαρμογη
+app.use('/api/admin', adminRoutes)
+
+// για να σερβίρει τον φακελο dist του front μετα το npm run build
+app.use(express.static('dist'))
+
+// αυτό ειναι κάτι που ίσως μου χρειαστεί στο deploy
+// app.get('/*', (req, res, next) => {
+//   if (req.path.startsWith('/api')) {
+//     return next(); // let the API routes handle it
+//   }
+
+//   res.sendFile(path.resolve(__dirname, 'dist', 'index.html'));
+// });
+
+module.exports = app
+```
+
+## βασικό boilerplate για φροντ
+#### main.jsx
+```jsx
+// το αφαίρεσα γιατί μου έκανε διπλές εγραφές
+// import { StrictMode } from 'react'
+import { createRoot } from 'react-dom/client'
+// για να μπορώ να χρησιμοποιώ το router για να στέλνω σε διαφορετικές σελλιδες φτιαγμένες απο το front
+import { BrowserRouter as Router } from 'react-router-dom' // bootstrap
+import 'bootstrap/dist/css/bootstrap.min.css';
+import App from './App.jsx' // η βασική μου εφαρμογή
+
+createRoot(document.getElementById('root')).render(
+  // <StrictMode>
+    <Router>
+      <App />
+    </Router>
+  // </StrictMode>,
+)
+```
+#### App.jsx
+```jsx
+import { useState, useEffect } from 'react'
+import axios from 'axios'
+import {
+  BrowserRouter as Router,
+  Routes, Route, Link, useNavigate
+} from 'react-router-dom'
+import { Container } from 'react-bootstrap'
+
+const url = 'http://localhost:3001/api'
+
+const App = () => {
+  const [message, setMessage] = useState('')
+
+  const navigate = useNavigate()
+  
+  return (
+    <div className="bg-dark text-light  d-flex flex-column justify-content-center align-items-center" style={{ minHeight: '100vh'}}>
+      {/* Routes here handle sub-pages like /admin */}
+      <Routes>
+        <Route path="/" element={
+          <>
+            <Home 
+              message={message}
+              setMessage={setMessage}
+              url={url}
+            />
+          </>
+        } /> 
+      </Routes>
+    </div>
+  )
+}
+
+export default App
+```
+
+# Δημιουργια admin
+## Back
+#### admin.models.js
+έχει
+- username - required
+- name
+- roles
+- email
+- hashedPassword - required
+
+```js
 const mongoose = require("mongoose")
 const Schema = mongoose.Schema
 const adminSchema = new Schema({
@@ -26,7 +300,7 @@ const adminSchema = new Schema({
     required: false,
     unique: true
   },
-  password:{
+  hashedPassword:{
     type: String,
     required: [true, 'password is required'],
   },
@@ -37,132 +311,8 @@ const adminSchema = new Schema({
 })
 module.exports = mongoose.model('Admin', adminSchema)
 ```
-```javascript
-const mongoose = require("mongoose")
-
-const Schema = mongoose.Schema
-const transactionSchema = new Schema({
-  amount:{
-    type: Number,
-    required: [true, 'amount is required'],
-  },
-  processed:{
-    type: Boolean,
-    default: false
-  },
-  participant: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Participant',
-    required: true
-  }
-},
-{
-  collection: 'Transactions',
-  timestamps: true
-})
-module.exports = mongoose.model('Transaction', transactionSchema)
-```
-```javascript
-const mongoose = require("mongoose")
-const transactions = require('./transaction.models')
-
-const Schema = mongoose.Schema
-const participantSchema = new Schema({
-  name:{
-    type: String,
-    required: false
-  },
-  surname:{
-    type: String,
-    required: false
-  },
-  email:{
-    type: String,
-    required: [true, 'email is required'],
-    unique: true
-  },
-  transactions: [{
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Transaction'
-  }],
-},
-{
-  collection: 'participants',
-  timestamps: true
-})
-module.exports = mongoose.model('Participant', participantSchema)
-```
-- δημιουργεία server.js
-``` javascript
-require('dotenv').config();
-const mongoose = require('mongoose');
-const app = require('./app'); // import the Express app from app.js
-
-const PORT = process.env.BACK_END_PORT
-
-mongoose.set('strictQuery', false);
-mongoose.connect(process.env.MONGODB_URI)
-  .then(() => {
-    console.log('connected to MongoDB');
-    app.listen(PORT, () => {
-      console.log(`Server running on port http://localhost:${PORT}`);
-    });
-  })
-  .catch((error) => {
-    console.error('error connecting to MongoDB:', error.message);
-  });
-```
-- δημιουργεία app.js
-```javascript
-require('dotenv').config()
-const express = require('express')
-const cors = require('cors')
-const adminRoutes = require('./routes/admin.routes')
-
-// const path = require('path'); // requires explanation. added for rendering front page subpages
-
-const app = express()
-app.use(cors())
-app.use(express.static('dist')) // να το δοκιμασω
-app.use(express.json());
-
-app.use('/api/admin', adminRoutes)
-
-// app.get('/*', (req, res, next) => {
-//   if (req.path.startsWith('/api')) {
-//     return next(); // let the API routes handle it
-//   }
-
-//   res.sendFile(path.resolve(__dirname, 'dist', 'index.html'));
-// });
-
-module.exports = app
-```
-- δημιουργεία .env
-```
-MONGODB_URI = mongodb+srv://alkisax:{password}@c
-
-MONGODB_TEST_URI = mongodb+srv://alkisax:{password}@
-
-BACK_END_PORT = 3000
-
-SECRET = ******
-JWT_SECRET=******
-
-GOOGLE_CLIENT_ID=******
-GOOGLE_CLIENT_SECRET=******
-# REDIRECT_URI=http://localhost:3000/api/login/google/callback
-REDIRECT_URI=https://loginapp-tjlf.onrender.com/api/login/google/callback
-
-APP_URL=http://localhost:3000
-FRONTEND_URL=https://loginapp-tjlf.onrender.com
-
-STRIPE_SECRET_KEY=******
-```
-
-### τωρα θα φτιάξω τα routes, τον controller και το DAO του admin ωστε με το ποστμαν να μπορω να ελεξω αν δουλεύουν
-## dao
-```javascript
+#### admin.dao.js
+```js
 const Admin = require('../models/admins.models');
 
 const findAllAdmins = async () => {
@@ -193,12 +343,11 @@ module.exports = {
   createAdmin,
   deleteAdminById
 };
-
 ```
-```javascript
-const bcrypt = require('bcrypt')
+#### admin.controller.js
+```js
+const bcrypt = require('bcrypt') // για να φτιάξω το hashed pass
 const Admin = require('../models/admins.models')
-// const authService = require('../services/auth.service')
 const adminDAO = require('../daos/admin.dao')
 
 exports.findAll = async (req,res) => {
@@ -230,7 +379,6 @@ exports.create = async (req,res) => {
   const hashedPassword = await bcrypt.hash(password, SaltOrRounds)
 
   try {
-
     const newAdmin = await adminDAO.createAdmin({
       username,
       name,
@@ -239,10 +387,10 @@ exports.create = async (req,res) => {
       hashedPassword
     });
 
-    logger.info(`Created new admin: ${username}`);
+    console.log(`Created new admin: ${username}`);
     res.status(201).json(newAdmin)
   } catch(error) {
-    logger.error(`Error creating admin: ${error.message}`);
+    console.log(`Error creating admin: ${error.message}`);
     res.status(400).json({error: error.message})
   }
 }
@@ -278,911 +426,354 @@ exports.deleteById = async (req, res) => {
   }
 }
 ```
-```javascript
+#### admin.routes.js
+```js
 const express = require('express')
 const router = express.Router()
 const adminController = require('../controllers/admin.controller')
-// const { verifyToken, checkRole } = require('../middlewares/verification.middleware');
+const { verifyToken, checkRole } = require('../middlewares/verification.middleware');
 
-// router.get ('/', verifyToken, checkRole('admin'), adminController.findAll)
+
 router.get ('/', adminController.findAll)
-router.post('/', adminController.create)
-// router.delete('/:id', verifyToken, checkRole('admin'), adminController.deleteById)
 router.delete('/:id', adminController.deleteById)
+router.post('/', adminController.create) // αυτό είναι βασικό και απο εδώ μπορώ να δημιουργισω έναν αντμιν χωρις να μου ζητάει κάποιο authentication
+// αυτά θα αλλάξουν αργότερα που θα αποκτήσω και auth
+// router.delete('/:id', verifyToken, checkRole('admin'), adminController.deleteById)
+// router.get ('/', verifyToken, checkRole('admin'), adminController.findAll)
 
 module.exports = router
 ```
-## ξεκινάω την αντιγραφή του auth
-### service controler routes middleware
-
-# postman test
-postman test
-post http://localhost:3000/api/login
-{
-    "username": "alkisax",
-    "password": "123"
-}
-		"token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6ImFsa2lzYXgiLCJlbWFpbCI6ImFsa2lzYXhAZ21haWwuY29tIiwicm9sZXMiOlsiYWRtaW4iXSwiaWQiOiI2ODA5MjEwZWE3NDgxNTkwZTk3NTk4NjYiLCJpYXQiOjE3NDU2ODExNTQsImV4cCI6MTc0NTY4NDc1NH0.Nxbnd0gqTey5e1zt9z3n2pH3IPazcEooGqew2jq7vlI",
-get http://localhost:3000/api/participant
-{
-	"status": true,
-	"data": []
-}
-post
-{
-    "name":"donator",
-    "surname": "mr nice guy",
-    "email":"samaritan@holymail.com"
-}
-{
-	"name": "donator",
-	"surname": "mr nice guy",
-	"email": "samaritan@holymail.com",
-	"transactions": [],
-	"_id": "680cfc08a7a6419a9a1370ab",
-	"createdAt": "2025-04-26T15:30:16.976Z",
-	"updatedAt": "2025-04-26T15:30:16.976Z",
-	"__v": 0
-}
-post http://localhost:3000/api/transaction
-{
-    "amount":50,
-    "participant":"680cfc08a7a6419a9a1370ab"
-}
-{
-	"amount": 50,
-	"processed": false,
-	"participant": "680cfc08a7a6419a9a1370ab",
-	"_id": "680d06867f262158f31e367d",
-	"createdAt": "2025-04-26T16:15:02.863Z",
-	"updatedAt": "2025-04-26T16:15:02.863Z",
-	"__v": 0
-}
-get http://localhost:3000/api/participant
-{
-	"status": true,
-	"data": [
-		{
-			"_id": "680cfc08a7a6419a9a1370ab",
-			"name": "donator",
-			"surname": "mr nice guy",
-			"email": "samaritan@holymail.com",
-			"transactions": [
-				{
-					"_id": "680d06867f262158f31e367d",
-					"amount": 50,
-					"processed": false,
-					"participant": "680cfc08a7a6419a9a1370ab",
-					"createdAt": "2025-04-26T16:15:02.863Z",
-					"updatedAt": "2025-04-26T16:15:02.863Z",
-					"__v": 0
-				}
-			],
-			"createdAt": "2025-04-26T15:30:16.976Z",
-			"updatedAt": "2025-04-26T16:15:03.674Z",
-			"__v": 0
-		}
-	]
-}
-
-# Stripe
-this my stripe part now
-
-```
-require('dotenv').config()
-const express = require('express')
-const cors = require('cors')
+#### app.js
+```js
 const adminRoutes = require('./routes/admin.routes')
-const loginRoutes = require('./routes/auth.routes')
-const participantRoutes = require('./routes/participant.routes')
-const transactionRoutes = require('./routes/transaction.routes')
-const stripeRoutes = require('./routes/stripe.routes')
-
-// const path = require('path'); // requires explanation. added for rendering front page subpages
-
-const app = express()
-app.use(cors())
-app.use(express.static('dist')) // να το δοκιμασω
-app.use(express.json());
 
 app.use('/api/admin', adminRoutes)
-app.use('/api/login', loginRoutes)
-app.use('/api/participant', participantRoutes)
-app.use('/api/transaction', transactionRoutes)
-app.use('/api/stripe', stripeRoutes)
-
-// app.get('/*', (req, res, next) => {
-//   if (req.path.startsWith('/api')) {
-//     return next(); // let the API routes handle it
-//   }
-
-//   res.sendFile(path.resolve(__dirname, 'dist', 'index.html'));
-// });
-
-module.exports = app
-
-const express = require('express');
-const router = express.Router();
-const stripeController = require('../controllers/stripe.controller');
-
-router.post('/checkout/:price_id', stripeController.createCheckoutSession);
-router.get('/success', stripeController.handleSuccess);
-router.get('/cancel', stripeController.handleCancel);
-
-module.exports = router;
 ```
-```
-const stripeService = require('../services/stripe.service');
-const transactionDAO = require('../daos/transaction.dao');
-const participantDAO = require('../daos/participant.dao');
 
-const createCheckoutSession = async (req, res) => {
-  const price_id = req.params.price_id;
+*Τωρα που εφτιαξα τον αντμιν μου πρέπει να δημιουργήσω ένα Login για να μπορεί να συνδεθει*
+# δημιουργία admin login
+# *Το google login έχει προβληματα. Το βάζω εδω αλλα αργότερα θα αλαχθει* https://console.cloud.google.com/apis/credentials
+#### auth.service.js
+```js
+const jwt = require('jsonwebtoken')
+const bcrypt = require('bcrypt')
+const { OAuth2Client } = require('google-auth-library')
 
-  try {
-    const session = await stripeService.createCheckoutSession(price_id);
-    res.json(session);
-  } catch (error) {
-    console.error('Error creating checkout session:', error.message);
-    res.status(500).json({ error: error.message });
+// δημιουγια τοκεν sevice
+generateAccessToken = (user) => {
+  // μέσα στο τοκεν βρίσκονται αποθηκευμένες στο string του οι διάφορες πληροφορίες του payload
+  const payload = {
+    username: user.username,
+    email: user.email,
+    roles: user.roles,
+    id: user._id
   }
-};
 
-const handleSuccess = async (req, res) => {
+  // χρειάζομαι ένα secret δικό μου που το αποθηκεύω στο .env
+  const secret = process.env.SECRET
+  // μέσα στο options μπορώ να βάλω πότε λίγει
+  const options = {
+    expiresIn: '1h'
+  }
+  // με .sign γίνετε η δημιουργία
+  const token = jwt.sign(payload, secret, options)
+  return token
+}
+
+const verifyPassword = async (password, hashedPassword) => {
+  // ΠΡΟΣΟΧΗ αυτό είναι bcrypt και οχι JWT που χρησιμοποιώ κατα κύριο λογο και αυτό είναι για εσωτερική χρήση. Mε .compare και δίνοντας το δικό μου pass και το pass απο το input γινετε η επιβεβαίωση
+  return await bcrypt.compare(password, hashedPassword)
+}
+
+// επιβεβαίωση τοκεν
+const verifyAccessToken = (token) => {
+  const secret = process.env.SECRET
   try {
-    const sessionId = req.query.session_id;
-    if (!sessionId) {
-      return res.status(400).send('Missing session ID.');
+    // JWT με .verify επιβεβαιώνει το τοκεν
+    const payload = jwt.verify(token, secret)
+    return { 
+      verified: true, data: payload
     }
-
-    const session = await stripeService.retrieveSession(sessionId);
-
-    const amountTotal = session.amount_total / 100; // Stripe returns cents
-    const customerEmail = session.customer_details.email;
-
-    console.log(`Payment success for: ${customerEmail}, amount: ${amountTotal}`);
-
-    let participant = await participantDAO.findParticipantByEmail(customerEmail);
-
-    if (!participant) {
-      console.log('Participant not found, creating new one...');
-      await participantDAO.createParticipant({ email: customerEmail, name: 'Anonymous', surname: 'Donator' });
+  } catch (error) {
+    return { 
+      verified: false, data: error.message
     }
+  }
+}
 
-    participant = await participantDAO.findParticipantByEmail(customerEmail);
+// μου γυρνάει το τοκεν ως αλφαρηθμιτικο
+const getTokenFrom = (req) => {
+  // το παίρνει απο τους header του request, θα ξεκινάει με bearer
+  const authorization = req.get('authorization')
+  if (authorization && authorization.toLowerCase().startsWith('bearer ')) {
+    // γυρνάω το τοκεν χωρίς το bearer
+    const token = authorization.replace('Bearer ', '')
+    return token    
+  }
+  return null
+}
 
-    await transactionDAO.createTransaction({
-      amount: amountTotal,
-      processed: true,
-      participant: participant._id
+const googleAuth = async (code) => {
+  // αυτά τα παίρνω απο το https://console.cloud.google.com/apis/credentials
+  const CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
+  const CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
+  const REDIRECT_URI = process.env.REDIRECT_URI;
+
+  // τα παιρνάω στη βιβλιοθήκη το google
+  const oauth2Client = new OAuth2Client(CLIENT_ID, CLIENT_SECRET, REDIRECT_URI);
+
+  try {
+    // Exchange code for tokens
+    const { tokens } = await oauth2Client.getToken(code)
+    // console.log("Step 1", tokens)
+    oauth2Client.setCredentials(tokens)
+
+    const ticket = await oauth2Client.verifyIdToken({
+      idToken: tokens.id_token,
+      audience: CLIENT_ID
     });
 
-    return res.send('Success! Your donation was recorded. Thank you!');
+    // console.log("Step 2")
+    const userInfo = await ticket.getPayload();
+    return {admin: userInfo, tokens}
   } catch (error) {
-    console.error('Error processing success route:', error.message);
-    return res.status(500).send('Something went wrong.');
+    console.log("Error in google authentication", error);
+    return { error: "Failed to authenticate with google"}
   }
-};
-
-const handleCancel = (req, res) => {
-  return res.send('Payment canceled! ');
-};
+}
 
 module.exports = {
-  createCheckoutSession,
-  handleSuccess,
-  handleCancel
-};
+  generateAccessToken,
+  verifyPassword,
+  verifyAccessToken,
+  getTokenFrom,
+  googleAuth
+}
 ```
-```
-const Stripe = require('stripe');
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-
-const QUANTITY = 1; // just number not string
-
-const createCheckoutSession = async (price_id) => {
-  const BACKEND_URL = process.env.YOUR_DOMAIN || 'http://localhost:3000';
-  return await stripe.checkout.sessions.create({
-    payment_method_types: ['card'],
-    line_items: [
-      {
-        price: price_id,
-        quantity: QUANTITY,
-      },
-    ],
-    mode: 'payment',
-    success_url: `${BACKEND_URL}/success?success=true&session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${BACKEND_URL}/cancel?canceled=true`,
-  });
-};
-
-const retrieveSession = async (sessionId) => {
-  return await stripe.checkout.sessions.retrieve(sessionId);
-};
-
-module.exports = {
-  createCheckoutSession,
-  retrieveSession
-};
-```
-# Note
-
-does this now works?
-user clicks buy me a coffee
-          <Nav.Link as={Link} to="/buymeacoffee" style={padding}>
-            Buy me a coffee
-          </Nav.Link>
-transfers to participantinfoform
-        <Route path='/buymeacoffee' element={
-          // <Checkout />
-          <Participantinfoform 
-            // newParticipant={newParticipant}
-            setNewParticipant={setNewParticipant}
-          />
-        } />
-there gives name surname and email and this are passed as url params to checkout
-const ParticipantInfoForm = ({ setNewParticipant }) => {
-
-  const navigate = useNavigate()
-
-  const handleSubmitParticipant = async (event) => {
-    const name = event.target.name.value
-    const surname = event.target.surname.value
-    const email = event.target.email.value
-
-    if (!email) {
-      alert('please enter your email')
-    }
-
-    setNewParticipant({
-      name: name,
-      surname: surname,
-      email: email
-    })
-
-    // Create a query string from the newParticipant object
-    const params = new URLSearchParams({
-      name: name,
-      surname: surname,
-      email: email,
-    }).toString()
-
-    navigate(/checkout?${params})
-  }
+#### auth.controller.js
+```js
+// site με πληροφοριες για το πως να φτιαχτει
+// https://github.com/mkarampatsis/coding-factory7-nodejs/blob/main/usersApp/controllers/auth.controller.js
+// https://fullstackopen.com/en/part4/token_authentication
+const bcrypt = require ('bcrypt')
+const jwt = require('jsonwebtoken');
+// καλώ πράγματα και απο το auth και απο τον admin
+const Admin = require('../models/admins.models')
+const authService = require('../services/auth.service')
+const adminDAO = require('../daos/admin.dao')
 
 
-in chceckout added  (im not sure about this part)
-import { useSearchParams } from 'react-router-dom'
-  const [participantInfo] = useSearchParams()
-
-participant info is added also to button
-      <div className="row justify-content-center">
-        {/* Card 1 */}
-        <div className="col-12 col-sm-4 mb-4">
-          <div className="card border border-white p-3 h-100">
-            <img src={oneCoin} className="card-img-top" alt="Donate 0.50€" />
-            <div className="card-body text-center">
-              <h5 className="card-title">Donate 0.50€</h5>
-              <p className="card-text">A small but mighty donation 🙏</p>
-              <button className="btn btn-primary" onClick={() => handleCheckout(PRICE_ID_050, participantInfo)}>Donate 0.50€</button>
-            </div>
-          </div>
-        </div>
-
-when clicked
-  const handleCheckout = async (price_id, participantInfo) => {
-    try {
-      // added participant info to be sent to back via url params
-      const response = await axios.post(${BACKEND_URL}/api/stripe/checkout/${price_id}, { participantInfo })
-
-      const { id } = response.data
-  
-      const stripe = await stripePromise
-      await stripe.redirectToCheckout({ sessionId: id })
-    } catch (error) {
-      console.log(error)
-    }
-  }
-
-this calls the back
-router.post('/checkout/:price_id', stripeController.createCheckoutSession);
-
-in the controller
-const handleSuccess = async (req, res) => {
+exports.login = async (req,res) => {
   try {
-    const sessionId = req.query.session_id;
-    const name = req.query.name;
-    const surname = req.query.surname;
-    const email = req.query.email;
-    if (!sessionId || !email) {
-      return res.status(400).send('Missing session ID.');
+    // μου έχει έρΘει (απο το postman) κάτι σαν object {} με username και password
+    const username = req.body.username
+    const password = req.body.password
+
+    if (!username) {
+      console.log("Login attempt missing username");
+      return res.status(400).json({
+        status: false,
+        message: "Username is required"
+      });
     }
-
-    const session = await stripeService.retrieveSession(sessionId);
-
-    const amountTotal = session.amount_total / 100; // Stripe returns cents
-
-    console.log(Payment success for: ${email}, amount: ${amountTotal});
-
-    let participant = await participantDAO.findParticipantByEmail(email);
-
-    if (!participant) {
-      console.log('Participant not found, creating new one...');
-      await participantDAO.createParticipant({ email: email, name: name, surname: surname });
-    }
-
-    const newTransaction = await transactionDAO.createTransaction({
-      amount: amountTotal,
-      processed: true,
-      participant: participant._id
-    });
-
-    await participantDAO.addTransactionToParticipant(participant._id, newTransaction._id);
-
-    return res.send('Success! Your donation was recorded. Thank you!');
-  } catch (error) {
-    console.error('Error processing success route:', error.message);
-    return res.status(500).send('Something went wrong.');
-  }
-};
-
-which also use a service which passes to the controller as params the participant info to be used in the creation of the transaction
-
-const createCheckoutSession = async (price_id) => {
-  const BACKEND_URL = process.env.YOUR_DOMAIN || 'http://localhost:3000';
-  const FRONTEND_URL = process.env.FRONTEND_URL || 'http://http://localhost:5173'
-  return await stripe.checkout.sessions.create({
-    payment_method_types: ['card'],
-    line_items: [
-      {
-        price: price_id,
-        quantity: QUANTITY,
-      },
-    ],
-    mode: 'payment',
-    // added to get the participant info from front to be able to create a new transaction
-    // success_url: ${BACKEND_URL}/success?success=true&session_id={CHECKOUT_SESSION_ID},
-    success_url: ${BACKEND_URL}/success?success=true&session_id={CHECKOUT_SESSION_ID}&name=${participantInfo.name}&surname=${participantInfo.surname}&email=${participantInfo.email},
-    cancel_url: ${FRONTEND_URL}/cancel?canceled=true,
-    // added to get the participant info from front to be able to create a new transaction
-    metadata: {
-      name: participantInfo.name,
-      surname: participantInfo.surname,
-      email: participantInfo.email
-    }
-  });
-};
-
-
-
-Το ChatGPT είπε:
-Yes, with the changes you’ve described, it looks like your donation flow should now work as expected, but let me summarize and point out any areas that might need further clarification or adjustments:
-
-Flow Overview:
-User Clicks "Buy Me A Coffee":
-
-The user is navigated to the /buymeacoffee page where the ParticipantInfoForm component is rendered.
-
-The participant fills in their name, surname, and email.
-
-User Submits Form:
-
-The form sends the participant information (name, surname, email) via the navigate() method, passing the data as URL query parameters to the /checkout route.
-
-Checkout Page:
-
-On the /checkout page, you retrieve the participant information using useSearchParams().
-
-When the user clicks the "Donate 0.50€" button, the handleCheckout function is called, passing both the price ID and the participant’s info to the backend.
-
-Backend:
-
-The backend receives the price_id and participant information in the request.
-
-The backend creates a Stripe checkout session, passing the participant information as metadata in the session creation.
-
-The backend also generates a success URL, including the session ID and participant info as query parameters.
-
-Stripe Checkout:
-
-Stripe handles the payment, and upon success, the user is redirected back to your backend's /success route with the session ID and participant info.
-
-Handle Success:
-
-The backend uses the session ID and participant info (either from query params or session metadata) to find or create the participant in the database.
-
-A new transaction is created for the participant based on the payment amount, and the transaction is linked to the participant.
-
-The user is shown a success message.
-
-Things to Verify:
-Passing Participant Info to handleCheckout:
-
-You are correctly passing the participantInfo to the handleCheckout function from the /checkout page. This info should then be sent to the backend correctly via the POST request.
-
-Metadata in Stripe Checkout Session:
-
-You are including the participant’s name, surname, and email in the metadata of the Stripe session. This will be useful for referencing the participant in the backend after the payment.
-
-Potential issue: In your createCheckoutSession function, you are trying to use participantInfo in the session creation code, but participantInfo might not be available directly in that function. You should ensure that participantInfo is correctly passed as an argument to createCheckoutSession when it is called.
-
-javascript
-Αντιγραφή
-Επεξεργασία
-const createCheckoutSession = async (price_id, participantInfo) => {
-  return await stripe.checkout.sessions.create({
-    payment_method_types: ['card'],
-    line_items: [
-      {
-        price: price_id,
-        quantity: 1,
-      },
-    ],
-    mode: 'payment',
-    success_url: `${BACKEND_URL}/success?success=true&session_id={CHECKOUT_SESSION_ID}&name=${participantInfo.name}&surname=${participantInfo.surname}&email=${participantInfo.email}`,
-    cancel_url: `${FRONTEND_URL}/cancel?canceled=true`,
-    metadata: {
-      name: participantInfo.name,
-      surname: participantInfo.surname,
-      email: participantInfo.email
-    }
-  });
-};
-When calling this function from the frontend, ensure that you're passing participantInfo like so:
-
-javascript
-Αντιγραφή
-Επεξεργασία
-const handleCheckout = async (price_id, participantInfo) => {
-  try {
-    const response = await axios.post(`${BACKEND_URL}/api/stripe/checkout/${price_id}`, { participantInfo });
-    const { id } = response.data;
-    const stripe = await stripePromise;
-    await stripe.redirectToCheckout({ sessionId: id });
-  } catch (error) {
-    console.log(error);
-  }
-};
-Query Parameters vs Metadata:
-
-You are passing participant info both as URL parameters (name, surname, email) and as metadata in the Stripe session. This is fine, but you should decide which one you prefer to use for processing after the success. Query parameters are simple, but metadata is more secure because it's associated directly with the Stripe session.
-
-Handling Success:
-
-In the handleSuccess function, you're retrieving the participant information from query parameters (req.query.name, req.query.email, etc.). You also could retrieve it from the Stripe session metadata, which is a more reliable source if you're handling the info at the session creation step.
-
-Here's how you could retrieve it from the session metadata (rather than query params):
-
-javascript
-Αντιγραφή
-Επεξεργασία
-const handleSuccess = async (req, res) => {
-  try {
-    const sessionId = req.query.session_id;
-    if (!sessionId) {
-      return res.status(400).send('Missing session ID.');
-    }
-
-    const session = await stripeService.retrieveSession(sessionId);
-    const { name, surname, email } = session.metadata;  // From metadata, not query params
-
-    const amountTotal = session.amount_total / 100; // Stripe returns cents
-
-    console.log(`Payment success for: ${email}, amount: ${amountTotal}`);
-
-    let participant = await participantDAO.findParticipantByEmail(email);
-
-    if (!participant) {
-      console.log('Participant not found, creating new one...');
-      participant = await participantDAO.createParticipant({ email: email, name: name, surname: surname });
-    }
-
-    const newTransaction = await transactionDAO.createTransaction({
-      amount: amountTotal,
-      processed: true,
-      participant: participant._id
-    });
-
-    await participantDAO.addTransactionToParticipant(participant._id, newTransaction._id);
-
-    return res.send('Success! Your donation was recorded. Thank you!');
-  } catch (error) {
-    console.error('Error processing success route:', error.message);
-    return res.status(500).send('Something went wrong.');
-  }
-};
-Summary:
-Ensure that participantInfo is correctly passed from the frontend to the backend when creating the Stripe session.
-
-Handle both query parameters and metadata carefully. The metadata can be a more reliable source of participant info.
-
-Consider using metadata to retrieve participant info on success, rather than passing it via query parameters.
-
-With these clarifications and corrections, your flow should work as expected! Let me know if you have further questions or if something doesn't seem to work.
-
-# new payment and new transaction
-
-```
-will thsi work now? im gona use real money again
-
-front App.jsx
-        <Route path="/cancel" element={
-          <>
-            <Home 
-              message={message}
-              setMessage={setMessage}
-            />
-          </>
-        } />
-
-        <Route path="/success" element={
-          <>
-            <Home 
-              message={message}
-              setMessage={setMessage}
-            />
-          </>
-        } /> 
-
-Home.jsx
-import { useEffect } from 'react'
-import { useSearchParams } from 'react-router-dom'
-
-const Home = ({ message, setMessage }) => {
-
-  const [searchParams] = useSearchParams()
-  useEffect(() => {
-    const canceled = searchParams.get('canceled'); 
-    const success = searchParams.get('success')
-
-    if (success === 'true'){
-      setMessage(`Payment successful! thank you! :)
-                  you will soon receive an email with the details`)
-    }
-
-    if (canceled === 'true') {
-      setMessage('Payment canceled! :(');
-      setTimeout(() => {
-        setMessage('');
-      }, 7000); 
-    }
-
-  }, [searchParams, setMessage])
-
-ParticipantInfoForm.jsx
-        <Form onSubmit={handleSubmitParticipant}>
-[...}
-  const handleSubmitParticipant = async (event) => {
-    const name = event.target.name.value
-    const surname = event.target.surname.value
-    const email = event.target.email.value
-
-    if (!email) {
-      alert('please enter your email')
-    }
-
-    setNewParticipant({
-      name: name,
-      surname: surname,
-      email: email
-    })
-
-    // Create a query string from the newParticipant object
-    const params = new URLSearchParams({
-      name: name,
-      surname: surname,
-      email: email,
-    }).toString()
-
-    navigate(`/checkout?${params}`)
-  }
-
-Checkout.jsx
-        {/* Card 3 */}
-        <div className="col-12 col-sm-4 mb-4">
-          <div className="card border border-white p-3 h-100">
-            <img src={threeCoins} className="card-img-top" alt="Donate 0.52€" />
-            <div className="card-body text-center">
-              <h5 className="card-title">Donate 0.52€</h5>
-              <p className="card-text">Wow, you're a hero! 💪</p>
-              <button className="btn btn-warning" onClick={() => handleCheckout(PRICE_ID_052)}>Donate 0.52€</button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-[...}
-  const handleCheckout = async (price_id) => {
-    const participantInfo = { 
-      name: searchParams.get('name'),
-      surname: searchParams.get('surname'),  
-      email: searchParams.get('email'),
-    };
-    console.log("participant info>>>", participantInfo);
-    console.log(">>> button clicked, price_id =", price_id)
-
-    try {
-      // added participant info to be sent to back via url params
-      const response = await axios.post(`${BACKEND_URL}/api/stripe/checkout/${price_id}`, { participantInfo })
-
-      const { id } = response.data
-  
-      const stripe = await stripePromise
-      await stripe.redirectToCheckout({ sessionId: id })
-    } catch (error) {
-      console.log(error)
-    }
-  }
-
-stripe.routes.js
-router.post('/checkout/:price_id', stripeController.createCheckoutSession);
-router.get('/success', stripeController.handleSuccess);
-router.get('/cancel', stripeController.handleCancel);
-
-stripe controller.js
-const createCheckoutSession = async (req, res) => {
-  const price_id = req.params.price_id;
-  // added to catch participant url params
-  const participantInfo = req.body.participantInfo;
-
-
-  try {
-    // added to catch participant url params
-    const session = await stripeService.createCheckoutSession(price_id, participantInfo);
-    res.json(session);
-  } catch (error) {
-    console.error('Error creating checkout session:', error.message);
-    res.status(500).json({ error: error.message });
-  }
-};
-
-stripeService.js
-const Stripe = require('stripe');
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-const express = require('express');
-
-const QUANTITY = 1; // just number not string
-
-const createCheckoutSession = async (price_id, participantInfo = {}) => {
-  const BACKEND_URL = process.env.YOUR_DOMAIN || 'http://localhost:3000';
-  const FRONTEND_URL = process.env.FRONTEND_URL || 'http://http://localhost:5173'
-
-  // added to get the participant info from front to be able to create a new transaction
-  const metadata = {
-    name: participantInfo.name || '',
-    surname: participantInfo.surname || '',
-    email: participantInfo.email
-  }
-  console.log('Creating checkout session with metadata:', metadata);
-
-  return await stripe.checkout.sessions.create({
-    payment_method_types: ['card'],
-    line_items: [
-      {
-        price: price_id,
-        quantity: QUANTITY,
-      },
-    ],
-    mode: 'payment',
-
-    // success_url: `${BACKEND_URL}/success?success=true&session_id={CHECKOUT_SESSION_ID}`,
-    success_url: `${BACKEND_URL}/api/stripe/success?success=true&session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${FRONTEND_URL}/cancel?canceled=true`,
-    metadata: metadata
-
-  });
-};
-
-const retrieveSession = async (sessionId) => {
-  return await stripe.checkout.sessions.retrieve(sessionId);
-};
-
-module.exports = {
-  createCheckoutSession,
-  retrieveSession
-};
-
-stripe.controller.js
-const handleSuccess = async (req, res) => {
-  try {
-    // συλλέγω διάφορα δεδομένα του χρήστη απο το url του success
-    const sessionId = req.query.session_id;
-    if (!sessionId) {
-      return res.status(400).send('Missing session ID.');
-    }
-
-    // δεν είμαι σιγουρος τι κανει. αλλα μάλλον κάνει await το response
-    const session = await stripeService.retrieveSession(sessionId);
-
-    const name = session.metadata.name
-    const surname = session.metadata.surname
-    const email  = session.metadata.email 
-
-    // αυτα τα δυο είναι που είναι υπχρεωτικα
-    if (!email) {
-      return res.status(400).send('Missing session ID.');
-    }
-
-    // κάνω τα ευρώ σέντς
-    const amountTotal = session.amount_total / 100; // Stripe returns cents
-
-    console.log(`Payment success for: ${email}, amount: ${amountTotal}`);
-
-    // ψαχνω τον participant απο το ημαιλ του για να τον ανανεώσω αν υπάρχει ή ν α τον δημιουργήσω
-    let participant = await participantDAO.findParticipantByEmail(email);
-
-    if (!participant) {
-      console.log('Participant not found, creating new one...');
-      // δημιουργία νεου participant
-      await participantDAO.createParticipant({ email: email, name: name, surname: surname });
-    }
-
-    // δημιουργία transaction
-    const newTransaction = await transactionDAO.createTransaction({
-      amount: amountTotal,
-      processed: true,
-      participant: participant._id
-    });
-    console.log("new transaction>>>", newTransaction);
     
-
-    return res.send('Success! Your donation was recorded. Thank you!');
-  } catch (error) {
-    console.error('Error processing success route:', error.message);
-    return res.status(500).send('Something went wrong.');
-  }
-};
-```
-will this work? will this create me a new transaction?
-
-
-```
-lets see it again
-
-i have this in  transactionController.js
-this checks if transactionId is ok, finds the transaction by id. if it doesnt exists -> error, else updates it.
-
-exports.toggleProcessed = async (req,res) => {
-  const transactionId = req.params.id
-  if (!transactionId){
-    return res.status(400).json({
-      status: false,
-      error: 'transaction ID is required OR not found'
-    })
-  }
-
-  try {
-    const transaction = await transactionDAO.findTransactionById(transactionId);
-
-    if (!transaction) {
-      return res.status(404).json({
+    if (!password) {
+      console.log("Login attempt missing password");
+      return res.status(400).json({
         status: false,
-        error: 'Transaction not found',
+        message: "Password is required"
       });
     }
 
-    const updatedData = {
-      processed: !transaction.processed
+    // Step 1: Find the admin by username
+    const admin = await adminDAO.findAdminByUsername(req.body.username);
+
+    if(!admin){
+      console.log(`Failed login attempt with username: ${req.body.username}`);
+      return res.status(401).json({
+        status: false,
+        message: 'Invalid username or password or admin not found'
+      })
     }
 
-    const updatedTransaction = await transactionDAO.updateTransactionById(transactionId, updatedData)
-    res.json({
+    // Step 2: Check the password
+    const isMatch = await authService.verifyPassword (password, admin.hashedPassword)
+
+    if(!isMatch){
+      console.log(`Failed login attempt with username: ${req.body.username}`);
+      return res.status(401).json({
+        status: false,
+        message: 'Invalid username or password'
+      })
+    }
+
+    // Step 3: Generate the token
+    const token = authService.generateAccessToken(admin)
+    console.log(`admin ${admin.username} logged in successfully`);
+
+    // Step 4: Return the token and user info
+    res.status(200).json({
       status: true,
-      data: updatedTransaction,
-    });
+      data: {
+        token: token,
+        admin: {
+          username: admin.username,
+          email: admin.email,
+          roles: admin.roles,
+          id: admin._id
+        }
+      }
+    })
 
   } catch (error) {
-    res.status(500).json({
-      status:false,
-      error: error.message
+    console.log(`Login error: ${error.message}`);
+    res.status(400).json({
+      status: false,
+      data: error.message
     })
   }
 }
 
-after that and inside this function an email functionality should be called TODO
-in app.js added
-const emailRoutes = require('./routes/email.routes')
+exports.googleLogin = async(req, res) => {
+  // αυτόν τον code μου τον επιστρέφει το google μετά το login
+  const code = req.query.code
+  if (!code) {
+    console.log('Auth code is missing during Google login attempt');
+    res.status(400).json({status: false, data: "auth code is missing"})
+  } 
 
-app.use('/api/email', emailRoutes)
+  // Μέσο στου σερβισ κάνω το google login
+  const result = await authService.googleAuth(code);
+  console.log('Google Auth Result:', result);
 
-created routes/email.routes.js which calles for controller passing transaction id
+  // απο τα αποτελέσματ ατου login βάζω σε δύο μεταβλητές το admin και tokens
+  const { admin, tokens } = result;
 
-const express = require('express');
-const router = express.Router();
-const emailController = require('../controllers/email.controller');
-
-router.post('/email/:transactionId', emailController.sendThnxEmail);
-
-module.exports = router;
-
-created email.controller.js
-const emailDAO = require('../daos/email.dao')
-const nodemailer = require("nodemailer");
-const transactionDAO = require('../daos/transaction.dao')
-
-exports.sendThnxEmail = async (req,res) => {
-  try {
-
-    const transactionId = req.params.id
-    const transaction = await transactionDAO.findTransactionById(transactionId)
-    const email= transaction.email
-
-    const transporter = nodemailer.createTransport({
-      service: "gmail",
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-      },
-    });
-
-    const mailOptions = {
-      from: process.env.EMAIL_USER,
-      to: email,
-      subject: "Thank You for Your Donation",
-      text: `Dear ${name},\n\nThank you for your generous donation! We greatly appreciate your support.\n\nBest regards,\nThe Team`,
-    };
-
-    const emailRecipt = await transporter.sendMail(mailOptions);
-    res.status(200).json({ status: true, data: emailRecipt });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ status: false, error: 'Thnx email Internal server error' });
+  if (!admin || !admin.email) {
+    console.log('Google login failed or incomplete');
+    return res.status(401).json({ status: false, data: "Google login failed" });
   }
+
+  // 🔐 Create token for your app (JWT etc.)
+  // δεν ξέρω τι κάνει TODO
+  const dbUser = await Admin.findOneAndUpdate(
+    { email: admin.email },
+    { $setOnInsert: { email: admin.email, name: admin.name, roles: ['admin'] } },
+    { upsert: true, new: true }
+  );
+
+  const payload = { id: dbUser._id, roles: dbUser.roles };
+  const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1d' });
+
+  // το google χρειάζετε που να σε στείλει μετα το login αυτό πρέπει να είναι καταχωρημένο και στο console του google cloud
+  const frontendUrl = process.env.FRONTEND_URL
+  console.log(frontendUrl);
+  
+  return res.redirect(`${frontendUrl}/google-success?token=${token}&email=${dbUser.email}`);
 }
 
-this is the transactionDAO.findTransactionById
-// Find transaction by ID
-const findTransactionById = async (transactionId) => {
-  return await Transaction.findById(transactionId).populate('participant');
-};
+```
+#### middleware/verification.middleware.js
+```js
 
-so iguess my transactionController.js becomes
-BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:3000'
+const authService = require('../services/auth.service');
 
-exports.toggleProcessed = async (req,res) => {
-  const transactionId = req.params.id
-  if (!transactionId){
-    return res.status(400).json({
+/**
+ * Middleware to verify JWT token.
+ * Attaches decoded user data to `req.user` if valid.
+ */
+const verifyToken = (req, res, next) => { // το next είναι που το κάνει middleware
+  const token = authService.getTokenFrom(req);
+  const verificationResult = authService.verifyAccessToken(token);
+
+  if (!verificationResult.verified) {
+    console.log(`Unauthorized access attempt with token: ${token}`);
+    return res.status(401).json({
       status: false,
-      error: 'transaction ID is required OR not found'
-    })
+      error: verificationResult.data
+    });
   }
 
-  try {
-    const transaction = await transactionDAO.findTransactionById(transactionId);
+  req.user = verificationResult.data;
+  next();
+};
 
-    if (!transaction) {
-      return res.status(404).json({
+/**
+ * Middleware to check if user has required role.
+ * Call after verifyToken middleware.
+ */
+const checkRole = (requiredRole) => {
+  return (req, res, next) => {
+    const user = req.user;
+
+    if (!user || !user.roles.includes(requiredRole)) {
+      console.log(`Forbidden access by user: ${user?.username || 'unknown'}`);
+      return res.status(403).json({
         status: false,
-        error: 'Transaction not found',
+        error: 'Forbidden'
       });
     }
 
-    const updatedData = {
-      processed: !transaction.processed
-    }
+    next();
+  };
+};
 
-    const updatedTransaction = await transactionDAO.updateTransactionById(transactionId, updatedData)
-    res.json({
-      status: true,
-      data: updatedTransaction,
-    });
-
-    try {
-      const emailRecipt = await axios.post(`${BACKEND_URL}/api/email/${transactionId}`)
-      res.status(200).json({ status: true, data: emailRecipt})
-    } catch (error) {
-      console.error(error)
-      res.status(500).json({ status:false, error: 'thnx email internal server error'})
-    }
-
-
-  } catch (error) {
-    res.status(500).json({
-      status:false,
-      error: error.message
-    })
-  }
-} 
+module.exports = {
+  verifyToken,
+  checkRole
+};
 ```
+### auth.routes.js
+```js
+const express = require('express')
+const router = express.Router()
+const authController = require('../controllers/auth.controller')
+
+router.post('/', authController.login)
+router.get('/google/callback', authController.googleLogin)
+
+module.exports = router
+```
+*Εχω ένα ετοιμο φτιαγμένο λινκ για να δοκιμαζω το google auth χωρις να χρειάζομαι το front end*
+```url
+https://accounts.google.com/o/oauth2/auth?client_id={apo_to_google}&redirect_uri={apo_to_google}&response_type={apo_to_auth.service}&scope=email%20profile&access_type=offline
+
+// αυτό είναι του combined app
+https://accounts.google.com/o/oauth2/auth?client_id=37391548646-a2tj5o8cnvula4l29p8lodkmvu44sirh.apps.googleusercontent.com&redirect_uri=http://localhost:3000/api/login/google/callback&response_type=code&scope=email%20profile&access_type=offline
+```
+
+#### app.js
+```js
+const loginRoutes = require('./routes/auth.routes')
+
+app.use('/api/login', loginRoutes)
+```
+
+#### με ποστμαν
+- post στο http://localhost:3001/api/login
+- με raw json
+```
+{
+    "username":"alkisax",
+    "password":"123"
+}
+```
+- παιρνω πισω κάτι σαν
+```html
+{
+    "status": true,
+    "data": {
+        "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6ImFsa2lzYXgiLCJlbWFpbCI6ImFsa2lzYXhAZ21haWwuY29tIiwicm9sZXMiOlsiYWRtaW4iXSwiaWQiOiI2ODA5MjEwZWE3NDgxNTkwZTk3NTk4NjYiLCJpYXQiOjE3NDYyNjIzODYsImV4cCI6MTc0NjI2NTk4Nn0.AwJbBUDxPCGuDQhnfo41vAblA2fhv3RJ-CwMpgD759c",
+        "admin": {
+            "username": "alkisax",
+            "email": "alkisax@gmail.com",
+            "roles": [
+                "admin"
+            ],
+            "id": "6809210ea7481590e9759866"
+        }
+    }
+}
+```
+
+## front login

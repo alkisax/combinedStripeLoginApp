@@ -29,15 +29,14 @@ exports.login = async (req,res) => {
       });
     }
 
-    // Step 1: Find the user by username
-    // const user = await User.findOne({username: req.body.username})
+    // Step 1: Find the admin by username
     const admin = await adminDAO.findAdminByUsername(req.body.username);
 
     if(!admin){
       console.log(`Failed login attempt with username: ${req.body.username}`);
       return res.status(401).json({
         status: false,
-        message: 'Invalid username or password'
+        message: 'Invalid username or password or admin not found'
       })
     }
 

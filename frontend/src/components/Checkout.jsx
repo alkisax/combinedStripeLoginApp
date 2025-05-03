@@ -9,7 +9,7 @@ import threeCoins from '../assets/three_coins.svg.png'
 import { useSearchParams } from 'react-router-dom'
 
 const PUBLIC_STRIPE_KEY = 'pk_live_51REuM3EsaPshQGwVZxSzQyBw2SJj4CnnSxuf6yWokbg5dRVAM0WpDFrIHnlF0sqQgykl4WVxCw5gA6bhDHWeyrFE00muoS3dkU'
-const BACKEND_URL = 'http://localhost:3000';
+const BACKEND_URL = 'http://localhost:3001';
 const PRICE_ID_050 = 'price_1RGPe4EsaPshQGwV6vXbMrhE'
 const PRICE_ID_051 = 'price_1RGkyMEsaPshQGwV7rsnw60y'
 const PRICE_ID_052 = 'price_1RGlWzEsaPshQGwVGwpZ9TSb'
