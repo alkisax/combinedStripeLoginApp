@@ -264,7 +264,6 @@ const App = () => {
     </div>
   )
 }
-
 export default App
 ```
 # Δημιουργία back logger
@@ -1320,3 +1319,1068 @@ describe("POST /api/login", () => {
 });
 ```
 ## front login
+#### App.jsx
+```jsx
+const App = () => {
+  const [user, setUser] = useState(null)
+  const [message, setMessage] = useState('')
+  const [username, setUsername] = useState('')
+  const [password, setPassword] = useState('')
+  const [userIsAdmin, setUserIsAdmin] = useState(false)
+  const [users, setUsers] = useState([])
+  const [admin, setAdmin] = useState(null)
+
+  const navigate = useNavigate()
+  
+  //
+  useEffect(() => {
+    // παίρνω απο το lockalstorage το token και το roles για να δω αν έχει κάνει login και αν είναι admin
+    const token = localStorage.getItem("token")
+    const roles = JSON.parse(localStorage.getItem("roles"))
+    const adminFromStorage = JSON.parse(localStorage.getItem("admin"))
+    if (token && roles && roles.includes('admin') && adminFromStorage) {
+      const userFromStorage = { token, roles }
+      setAdmin(userFromStorage)
+      setUserIsAdmin(true) 
+    }
+  }, [])
+
+  const handleLogin = async (event) => {
+    event.preventDefault()
+    console.log("Submitting login...")
+
+    try {
+      const response = await axios.post(`${url}/login`, {
+        "username": username,
+        "password": password
+      })
+      console.log("Login successful", response.data)
+
+      const { token, admin } = response.data.data
+      setUser(admin)
+
+      // αποθηκεύω στο lockalstorage για να παραμένει loged in μετα το refresh
+      localStorage.setItem("token", token)
+      localStorage.setItem("roles", JSON.stringify(admin.roles))
+
+      setAdmin({ token, roles: admin.roles })
+      localStorage.setItem("admin", JSON.stringify(admin));
+
+      // η isAdmin είναι boolean και την χρησιμοποιώ με && στα διάφορα render που είναι να τα βλέπει μόνο ο admin
+      const isAdmin = admin.roles.includes("admin")
+      setUserIsAdmin(isAdmin)
+      console.log("Is admin?", isAdmin)
+
+    } catch (error) {
+      console.log(error)     
+    }
+    
+    // αυτό μπορούμε να το χρησιμοποιήσουμε γιατί έχουμε  const navigate = useNavigate() και μας οδηγεί στο home
+    navigate("/")
+  }
+
+  const handleLogout = async () => {
+    // καθαρίζουμε το localStorage και το State
+    localStorage.removeItem("token")
+    localStorage.removeItem("roles");
+    localStorage.removeItem("admin");
+    setAdmin(null)
+    setUserIsAdmin(false)
+    console.log("Logged out successfully")
+    navigate("/")
+  }
+
+// το login route είναι για να με πάει στην φορμα του Login
+// το admin route είναι για να με πάει στο login panel
+// το Protected route  βεβαιώνει οτι δεν μπορουν να το δουν μη-admin ακομα και αν το γράψουν στο Url
+  return (
+    // το μενου παρακάτω 
+      άλλο 
+    <Appbar 
+      admin={admin}
+      handleLogout={handleLogout}
+    />
+
+    <Routes>
+        <Route path="/" element={
+          <>
+            <Home 
+              message={message}
+              setMessage={setMessage}
+              url={url}
+            />
+          </>
+        } />
+
+        <Route path="/login" element={
+          <>
+            <LoginForm 
+              username={username}
+              password={password}
+              setUsername={setUsername}
+              setPassword={setPassword}
+              handleLogin={handleLogin}
+              url={url}
+            />
+          </>
+        } />
+
+        <Route path="/admin" element={
+          <>
+            // το πως γίνετε Protected route ακολουθεί αμέσος επόμενο
+            <ProtectedRoute admin={admin} requiredRole="admin"></ProtectedRoute>
+            <AdminPanel
+              url={url}
+              // handleDeleteParticipant={handleDeleteParticipant}
+              // participants={participants}
+              // setParticipants={setParticipants}
+              // αυτά μόλλον είναι περιτα
+              users={users}
+              setUsers={setUsers}
+            />
+          </>
+        } />  
+    </Routes>
+  )
+}
+export default App
+```
+
+#### ProtectedRoute.jsx
+```jsx
+import { Navigate } from 'react-router-dom';
+
+const ProtectedRoute = ({ admin , children, requiredRole }) => {
+  if (!admin) {
+    console.log("protected failed");    
+    return <Navigate to="/" />;
+  }
+
+  if (requiredRole && !admin.roles.includes(requiredRole)) {
+    console.log("protected passed"); 
+    return <Navigate to="/" />;
+  }
+
+  return children;
+};
+
+export default ProtectedRoute;
+```
+
+#### Appbar.jsx
+```jsx
+import { Navbar, Nav, Container, Button } from 'react-bootstrap';
+import { Link, Routes, Route } from 'react-router-dom';
+
+const Appbar = ({ admin, handleLogout }) => {
+
+  const padding = {
+    paddingRight: 5,
+  };
+
+  return (
+    <>
+      <Navbar collapseOnSelect expand="lg" bg="dark" variant="dark">
+        <Navbar.Toggle aria-controls="responsive-navbar-nav" />
+        <Navbar.Collapse id="responsive-navbar-nav">
+        <Nav className="me-auto">
+
+          // έχει μέσα του διάφορα λινκ.
+          <Nav.Link as={Link} to="/" style={padding}>
+            Home
+          </Nav.Link>
+
+          <Nav.Link as={Link} to="/buymeacoffee" style={padding}>
+            Buy me a coffee
+          </Nav.Link>
+
+          // turnary. αν αντμιν δειξε αν οχι μη δείξεις
+          {admin ? (
+            <div className="d-flex flex-column align-items-start ml-auto" style={{ padding }}>
+              <em style={{ paddingRight: 10 }}>{admin.token ? 'Admin logged in' : 'Logged in'}</em>
+              <Nav.Link as={Link} to="/admin" style={padding}>
+                Admin Pannel
+              </Nav.Link>
+              <Button variant="outline-light" size="sm" onClick={handleLogout}>
+                Logout
+              </Button>
+            </div>
+          ) : (
+            <Nav.Link as={Link} to="/login" style={padding}>
+              Admin Login
+            </Nav.Link>
+          )}
+
+          </Nav>
+        </Navbar.Collapse>
+      </Navbar>
+    </>
+  )
+}
+export default Appbar
+```
+
+#### Home.jsx /
+```jsx
+import { useEffect, useRef } from 'react'
+import axios from 'axios'
+import { useSearchParams } from 'react-router-dom'
+
+const Home = ({ message, setMessage, url }) => {
+  // // επειδή εδώ ξαναγυρνάμε και στο success ή fail του Stripe Checkout με url parms, εδώ ειναι η λογική που το διαχειρίζετε αυτό. Tο αφήνω εδώ αλλα θα το προσθέσω ξανα στην ώρα του
+  // // επρεπε να γίνει γιατι καλούσε το success 2 φορες δημιουργώντας 2 transactions
+  // // το useRef είναι σαν το state αλλα δεν προκαλει refresh
+  // const hasCalledSuccessRef = useRef(false);
+
+  // // παίρνει τα url parms
+  // const [searchParams] = useSearchParams()
+  // useEffect(() => {
+  //   const canceled = searchParams.get('canceled'); 
+  //   const success = searchParams.get('success')
+  //   // added to manage to call stripe.controller.js handlesucces from frontend
+  //   const sessionId = searchParams.get('session_id');
+  //   console.log("sessionId", sessionId);
+    
+
+  //   if (success === 'true' && sessionId && !hasCalledSuccessRef.current){
+  //     // επρεπε να φτιαξω μια νεα function γιατι το axios δεν δουλευε αλλιώς
+  //     const fetchSuccess = async () => {
+  //       try {
+  //         // θα μας δημιουργήσει το transaction
+  //         const result = await axios.get(`${url}/stripe/success?session_id=${sessionId}`)
+  //         console.log("Success response:", result.data);
+  //         // για να εμποδίσει επανάληψη της κλήσης
+  //         hasCalledSuccessRef.current = true;
+  //       } catch (error) {
+  //         console.error ("Error handling success:", error)
+  //       }
+  //     }
+  //     fetchSuccess()
+  //     // το message του success δεν εχει timeout
+  //     setMessage(`Payment successful! thank you! :)
+  //                 you will soon receive an email with the details`)
+  //   }
+
+  //   if (canceled === 'true') {
+  //     setMessage('Payment canceled! :(');
+  //     setTimeout(() => {
+  //       setMessage('');
+  //     }, 7000); 
+  //   }
+
+  // }, [searchParams, setMessage, url]) // τρέχει οποτε αλλάξει κάποιο απο αυτά
+
+  return (
+    <>
+      // {message && (
+      //   <div className={`alert ${message.includes('canceled') ? 'alert-danger' : 'alert-success'} pb-3`} role="alert">
+      //     {message}
+      //   </div>
+      // )}
+
+      <h1>Donate APP</h1>
+      <p>stripe + login app</p>
+      <p className="text-center text-secondary small">to create an admin has to be done through backend with postman.
+        post http://localhost:3000/api/admin
+        {`{
+          "username": "newadmin",
+          "name": "New Admin",
+          "email": "newadmin@example.com",
+          "password": "password123",
+          "roles": ["admin"] 
+        }`}
+        </p>
+      {/* <Checkout /> */}
+    </>
+  )
+}
+
+export default Home
+```
+
+#### LoginForm.jsx /login
+```jsx
+
+const LoginForm = ({ username, password, setUsername, setPassword, handleLogin, url }) =>{
+
+  // βάζω προκατασκευασμένο url
+  const googleUrl = `https://accounts.google.com/o/oauth2/auth?client_id=37391548646-a2tj5o8cnvula4l29p8lodkmvu44sirh.apps.googleusercontent.com&redirect_uri=${url}/login/google/callback&response_type=code&scope=email%20profile&access_type=offline`;
+
+  return (
+    <>
+      <form onSubmit={handleLogin}>
+        <div>
+          username
+          <input type="text"
+          id="username"
+          value={username}
+          name="username"
+          onChange={({target}) => setUsername(target.value)}
+          autoComplete="username"
+          />
+        </div>
+        <div>
+          password
+          <input type="text"
+          id="password"
+          value={password}
+          name="password"
+          onChange={({target}) => setPassword(target.value)}
+          autoComplete="password"
+          />
+        </div>
+        <button id="loginBtn" type="submit">login</button>
+      </form>
+
+      <a href={googleUrl}>
+        <button id="GoogleLoginBtn" type="button">Login with Google</button>
+      </a>
+    </>
+  )
+}
+export default LoginForm
+```
+
+- AdminPanel.jsx /admin
+- **πριν δουμε το AdminPanel** θα επιστρέψουμε στο back για να δημιουργήσουμε τον participant (model, dao, controller, routes, test)
+## Participant Backend
+#### participant.models.js
+- name
+- surname
+- email
+- transactions (συνδεδεμένο με transactions που θα φτιαχτεί αμέσος μετά)
+```js
+const mongoose = require("mongoose")
+const transactions = require('./transaction.models')
+
+const Schema = mongoose.Schema
+const participantSchema = new Schema({
+  name:{
+    type: String,
+    required: false
+  },
+  surname:{
+    type: String,
+    required: false
+  },
+  email:{
+    type: String,
+    required: [true, 'email is required'],
+    unique: true
+  },
+  transactions: [{
+    type: mongoose.Schema.Types.ObjectId, // Each item here is an ObjectId pointing to a Transaction document
+    ref: 'Transaction' // This tells Mongoose *which* collection/model to link (the 'Transaction' model)
+  }],
+},
+{
+  collection: 'participants',
+  timestamps: true
+})
+module.exports = mongoose.model('Participant', participantSchema)
+```
+
+#### participant.dao.js
+```js
+const Participant = require('../models/participant.models');
+
+const findAllParticipants = async () => {
+  return await Participant.find().populate('transactions');
+};
+
+const findParticipantByEmail = async (email) => {
+  return await Participant.findOne({ email }).populate('transactions');
+};
+
+const createParticipant = async (participantData) => {
+  const participant = new Participant(participantData);
+  return await participant.save();
+};
+
+const deleteParticipantById = async (participantId) => {
+  return await Participant.findByIdAndDelete(participantId);
+};
+
+const addTransactionToParticipant = async (participantId, transactionId) => {
+  return await Participant.findByIdAndUpdate(
+    participantId,
+    { $push: { transactions: transactionId } },
+    { new: true }
+  );
+};
+
+module.exports = {
+  findAllParticipants,
+  findParticipantByEmail,
+  createParticipant,
+  deleteParticipantById,
+  addTransactionToParticipant
+};
+```
+
+#### participant.controller.js
+```js
+const bcrypt = require("bcrypt")
+const logger = require('../utils/logger')
+const Participant = require('../models/participant.models')
+const participantDao = require('../daos/participant.dao')
+
+exports.findAll = async (req,res) => {
+  try {
+    // add later when auth
+    if (!req.headers.authorization) {
+      return res.status(401).json({ status: false, error: 'No token provided' });
+    }
+
+    const participants = await participantDao.findAllParticipants()
+    logger.info("Fetched all participants");
+    res.status(200).json({
+      status: true,
+      data: participants
+    })
+
+  } catch (error) {
+    logger.error(`findAll error: ${error.message}`)
+    console.error(error)
+    res.status(500).json({
+      status: false,
+      error: 'find all paricipants error'
+    })
+  }
+}
+
+exports.create = async (req,res) => {
+  let data = req.body
+
+  const name = data.name
+  const surname = data.surname
+  const email = data.email
+  const transactions = data.transactions
+
+  try {
+
+    const newParticipant = await participantDao.createParticipant({
+      name,
+      surname,
+      email,
+      transactions
+    });
+
+    logger.info(`Created new participant: ${email}`);
+    res.status(201).json(newParticipant)
+  } catch(error) {
+    logger.error(`Error creating participant: ${error.message}`);
+    res.status(400).json({error: error.message})
+  }
+}
+
+exports.deleteById = async (req, res) => {
+  const participantId = req.params.id
+  if (!participantId){
+    logger.warn("Delete attempt without ID");
+    return res.status(400).json({
+      status: false,
+      error: 'participant ID is required OR not found'
+    })
+  }
+  
+  try {
+    const deleteParticipant = await participantDao.deleteParticipantById(participantId) 
+
+    if (!deleteParticipant){
+      logger.warn(`Delete failed: participant ${participantId} not found`);
+      return res.status(404).json({
+        status: false,
+        error: 'Error deleting participant: not found'
+      })
+    } else {
+      logger.info(`Deleted participant ${deleteParticipant.username}`);
+      res.status(200).json({
+        status: true,
+        message: `participant ${deleteParticipant.username} deleted successfully`,
+      })
+    }
+  } catch (error) {
+    logger.error(`Delete error: ${error.message}`);
+    res.status(500).json({
+      status: false,
+      error: error.message
+    })
+  }
+}
+```
+
+#### participant.routes.js
+```js
+const express = require('express')
+const router = express.Router()
+const participantController = require('../controllers/participant.controller')
+const { verifyToken, checkRole } = require('../middlewares/verification.middleware');
+
+router.get ('/', verifyToken, checkRole('admin'), participantController.findAll)
+router.post('/', participantController.create)
+router.delete('/:id', verifyToken, checkRole('admin'), participantController.deleteById)
+
+module.exports = router
+```
+#### swagger documentation for paritcipant routes
+```js
+/**
+ * @swagger
+ * tags:
+ *   name: Participants
+ *   description: API for managing participants
+ */
+
+/**
+ * @swagger
+ * /participants:
+ *   get:
+ *     summary: Get all participants
+ *     tags: [Participants]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: A list of participants
+ *       401:
+ *         description: Unauthorized - no token
+ *       403:
+ *         description: Forbidden - not admin
+ */
+router.get('/', verifyToken, checkRole('admin'), participantController.findAll);
+
+/**
+ * @swagger
+ * /participants:
+ *   post:
+ *     summary: Create a new participant
+ *     tags: [Participants]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - name
+ *               - surname
+ *               - email
+ *             properties:
+ *               name:
+ *                 type: string
+ *               surname:
+ *                 type: string
+ *               email:
+ *                 type: string
+ *               transactions:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *     responses:
+ *       201:
+ *         description: Participant created
+ *       400:
+ *         description: Bad request
+ */
+router.post('/', participantController.create);
+
+/**
+ * @swagger
+ * /participants/{id}:
+ *   delete:
+ *     summary: Delete a participant by ID
+ *     tags: [Participants]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         description: ID of the participant to delete
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Participant deleted successfully
+ *       404:
+ *         description: Participant not found
+ *       401:
+ *         description: Unauthorized
+ *       500:
+ *         description: Server error
+ */
+router.delete('/:id', verifyToken, checkRole('admin'), participantController.deleteById)
+```
+#### app.js
+```js
+const participantRoutes = require('./routes/participant.routes')
+
+app.use('/api/participant', participantRoutes)
+```
+
+## transaction Backend
+#### transaction.models.js
+```js
+const mongoose = require("mongoose")
+
+const Schema = mongoose.Schema
+const transactionSchema = new Schema({
+  amount:{
+    type: Number,
+    required: [true, 'amount is required'],
+  },
+  processed:{
+    type: Boolean,
+    default: false
+  },
+  participant: {
+    type: mongoose.Schema.Types.ObjectId, // This stores a reference (ID) to a Participant document
+    ref: 'Participant', // This tells Mongoose to link this field to the 'Participant' model
+    required: true
+  }
+},
+{
+  collection: 'Transactions',
+  timestamps: true
+})
+module.exports = mongoose.model('Transaction', transactionSchema)
+```
+#### transaction.dao.js
+```js
+const Transaction = require('../models/transaction.models');
+const Participant = require('../models/participant.models')
+
+// Find all transactions
+const findAllTransactions = async () => {
+  return await Transaction.find().populate('participant');
+};
+
+// Find transaction by ID
+const findTransactionById = async (transactionId) => {
+  return await Transaction.findById(transactionId).populate('participant');
+};
+
+// Create a new transaction
+const createTransaction = async (transactionData) => {
+  const transaction = new Transaction(transactionData);
+  return await transaction.save();
+};
+
+// Delete a transaction by ID
+const deleteTransactionById = async (transactionId) => {
+  return await Transaction.findByIdAndDelete(transactionId);
+};
+
+// Update a transaction (for example, changing the amount)
+const updateTransactionById = async (transactionId, updatedData) => {
+  return await Transaction.findByIdAndUpdate(
+    transactionId,
+    updatedData,
+    { new: true } // return the updated document
+  );
+};
+
+const findTransactionsByProcessed = async (isProcessed) => {
+  return await Transaction.find({ processed: isProcessed }).populate('participant');
+};
+
+const addTransactionToParticipant = async (participantId, transactionId) => {
+  return await Participant.findByIdAndUpdate(
+    participantId,
+    { $push: { transactions: transactionId } },
+    { new: true }
+  ); //"Find the participant and push this new transactionId into their transactions array."
+};
+
+const findBySessionId = async (sessionId) => {
+  return await Transaction.findOne({ sessionId });
+};
+
+module.exports = {
+  findAllTransactions,
+  findTransactionById,
+  createTransaction,
+  deleteTransactionById,
+  updateTransactionById,
+  findTransactionsByProcessed,
+  findBySessionId
+};
+```
+#### transactionController.js
+```js
+const bcrypt = require('bcrypt')
+const logger = require('../utils/logger')
+const Transaction = require('../models/transaction.models')
+const transactionDAO = require('../daos/transaction.dao')
+const participantDAO = require('../daos/participant.dao')
+const axios = require('axios')
+// const sendThnxEmail = require('../controllers/email.controller') // !!!
+
+BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:3000'
+
+exports.findAll = async (req,res) => {
+  try {
+
+    // add later when auth
+    if (!req.headers.authorization) {
+      logger.warn('Unauthorized access attempt to findAll');
+      return res.status(401).json({ status: false, error: 'No token provided' });
+    }
+
+    const transactions = await transactionDAO.findAllTransactions();
+    logger.info('Fetched all transactions: %d found', transactions.length);
+    res.status(200).json({ status: true, data: transactions });
+  } catch (error) {
+    console.error(error);
+    logger.error('Error in findAll: %s', error.message);
+    res.status(500).json({ status: false, error: 'Internal server error' });
+  }
+}
+
+exports.findUnprocessed = async (req,res) => {
+  
+  try {
+    // add later when auth
+    if (!req.headers.authorization) {
+      logger.warn('Unauthorized access attempt to findUnprocessed');
+      return res.status(401).json({ status: false, error: 'No token provided' });
+    }
+
+    const unprocessed = await transactionDAO.findTransactionsByProcessed(false)
+    logger.info('Fetched unprocessed transactions: %d found', unprocessed.length);
+    res.status(200).json({
+      status: true,
+      data: unprocessed
+    })
+
+  } catch (error) {
+    logger.error('Error in findUnprocessed: %s', error.message);
+    res.status(500).json(error)
+  }
+}
+
+exports.create = async (req,res) => {
+  let data = req.body
+  const amount = data.amount
+  const processed = data.processed
+  const participant = data.participant
+
+  try {
+    const newTransaction = await transactionDAO.createTransaction({
+      amount,
+      processed,
+      participant
+    });
+
+    logger.info('Created transaction: %o', { amount, participant });
+    await participantDAO.addTransactionToParticipant(participant, newTransaction._id);
+
+    res.status(201).json(newTransaction)
+  } catch(error) {
+    logger.error(`Error creating transaction: ${error.message}`);
+    res.status(400).json({error: error.message})
+  }
+}
+
+// αυτή είναι σημαντική γιατί στέλνει αυτόματα το email
+exports.toggleProcessed = async (req,res) => {
+  const transactionId = req.params.id
+  if (!transactionId){
+    logger.warn('Missing transaction ID in toggleProcessed');
+    return res.status(400).json({
+      status: false,
+      error: 'transaction ID is required OR not found'
+    })
+  }
+
+  try {
+    const transaction = await transactionDAO.findTransactionById(transactionId);
+
+    if (!transaction) {
+      logger.warn('Transaction not found with ID: %s', transactionId);
+      return res.status(404).json({
+        status: false,
+        error: 'Transaction not found',
+      });
+    }
+
+    const updatedData = {
+      processed: !transaction.processed
+    }
+
+    const updatedTransaction = await transactionDAO.updateTransactionById(transactionId, updatedData)
+
+    // εδώ στέλνουμε το email
+    await axios.post(`${BACKEND_URL}/api/email/${transactionId}`)
+    logger.info('Toggled processed status for transaction %s to %s', transactionId, updatedData.processed);
+    res.status(200).json({ status: true, data: updatedTransaction})
+  } catch (error) {
+    logger.error('Error toggling transaction processed status: %s', error.message);
+    res.status(500).json({
+      status:false,
+      error: error.message
+    })
+  }
+}
+
+exports.deleteById = async (req, res) => {
+  const transactionId = req.params.id
+  if (!transactionId){
+    logger.warn('Missing transaction ID in deleteById');
+    return res.status(400).json({
+      status: false,
+      error: 'transaction ID is required OR not found'
+    })
+  }
+  
+  try {
+    const deleteTransaction = await transactionDAO.deleteTransactionById(transactionId) 
+
+    if (!deleteTransaction){
+      logger.warn('Transaction not found for deletion with ID: %s', transactionId);
+      return res.status(404).json({
+        status: false,
+        error: 'Error deleting transaction: not found'
+      })
+    } else {
+      logger.info('Deleted transaction with ID: %s', transactionId);
+      res.status(200).json({
+        status: true,
+        message: `transaction deleted successfully`,
+      })
+    }
+  } catch (error) {
+    logger.error('Error deleting transaction: %s', error.message);
+    res.status(500).json({
+      status: false,
+      error: error.message
+    })
+  }
+}
+```
+#### transaction.routes.js
+```js
+const express = require('express')
+const router = express.Router()
+const transactionController = require('../controllers/transactionController')
+const { verifyToken, checkRole } = require('../middlewares/verification.middleware')
+
+// GET all transactions (admin only)
+router.get('/', verifyToken, checkRole('admin'), transactionController.findAll)
+
+// GET unprocessed transactions (admin only)
+router.get('/unprocessed', verifyToken, checkRole('admin'), transactionController.findUnprocessed)
+
+// POST create a new transaction (no auth yet)
+router.post('/', transactionController.create);
+
+// DELETE a transaction by ID (admin only)
+router.delete('/:id', verifyToken, checkRole('admin'), transactionController.deleteById)
+
+router.put('/toggle/:id', verifyToken, checkRole('admin'), transactionController.toggleProcessed)
+
+module.exports = router;
+```
+#### transaction swagger documentation comments
+```js
+/**
+ * @swagger
+ * tags:
+ *   name: Transactions
+ *   description: Transaction management routes
+ */
+
+/**
+ * @swagger
+ * /api/transactions:
+ *   get:
+ *     summary: Get all transactions (admin only)
+ *     tags: [Transactions]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: A list of transactions
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden
+ */
+router.get('/', verifyToken, checkRole('admin'), transactionController.findAll)
+
+/**
+ * @swagger
+ * /api/transactions/unprocessed:
+ *   get:
+ *     summary: Get unprocessed transactions (admin only)
+ *     tags: [Transactions]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of unprocessed transactions
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden
+ */
+router.get('/unprocessed', verifyToken, checkRole('admin'), transactionController.findUnprocessed)
+
+/**
+ * @swagger
+ * /api/transactions:
+ *   post:
+ *     summary: Create a new transaction
+ *     tags: [Transactions]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - amount
+ *               - participant
+ *             properties:
+ *               amount:
+ *                 type: number
+ *               processed:
+ *                 type: boolean
+ *               participant:
+ *                 type: string
+ *     responses:
+ *       201:
+ *         description: Transaction created successfully
+ *       400:
+ *         description: Invalid input
+ */
+router.post('/', transactionController.create)
+
+/**
+ * @swagger
+ * /api/transactions/{id}:
+ *   delete:
+ *     summary: Delete a transaction by ID (admin only)
+ *     tags: [Transactions]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Transaction ID
+ *     responses:
+ *       200:
+ *         description: Transaction deleted
+ *       404:
+ *         description: Transaction not found
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden
+ */
+router.delete('/:id', verifyToken, checkRole('admin'), transactionController.deleteById)
+
+/**
+ * @swagger
+ * /api/transactions/toggle/{id}:
+ *   put:
+ *     summary: Toggle the processed status of a transaction (admin only)
+ *     tags: [Transactions]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Transaction ID
+ *     responses:
+ *       200:
+ *         description: Transaction updated
+ *       404:
+ *         description: Transaction not found
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden
+ */
+router.put('/toggle/:id', verifyToken, checkRole('admin'), transactionController.toggleProcessed)
+```
+#### app.js
+```js
+const transactionRoutes = require('./routes/transaction.routes')
+
+app.use('/api/transaction', transactionRoutes)
+```
+## Admin pannel Front ens
+#### AdminPanel.jsx
+```jsx
+/* eslint-disable react-hooks/exhaustive-deps */
+import { useState, useEffect  } from "react"
+import { Link } from 'react-router-dom'
+import axios from 'axios'
+import NewParticipantForm from './NewParticipantForm'
+import Transactions from './Transactions'
+
+const AdminPanel = ({url, handleDeleteParticipant, participants, setParticipants}) => {
+  const [viewForm, setViewForm] = useState(false)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchParticipants = async () => {
+      try {
+        const token = localStorage.getItem("token"); 
+        
+        const response = await axios.get(`${url}/participant`, {
+          headers: {
+            Authorization: `Bearer ${token}`, 
+          },
+        });
+        setParticipants(response.data.data); 
+        setLoading(false);
+      } catch (error) {
+        console.error("Error fetching users:", error);
+        setLoading(false); 
+      }
+    };
+
+    fetchParticipants();
+  }, [url]);
+
+  return (
+    <div>
+      <h2>Admin Panel</h2>
+      <p>Only admins can see this.</p>
+      <Transactions url={url} />
+      {loading && <p>Loading...</p>}
+      {!loading && participants.length === 0 && <p>No participants found</p>}
+      <ul>
+        {!loading && participants.length !== 0 && 
+          participants.map((participant) => {
+            return (
+              <li key={participant._id || `${participant.name}-${participant.email}`}>
+                 <Link to={`/users/${participant._id}`}>
+                  {participant.email}
+                 </Link>
+                 - {participant.name} - {participant.email} - {participant.surname}
+                 <button id={`${participant.email}Btn`} onClick={() => handleDeleteParticipant(participant._id)}>Delete</button>
+              </li>
+            )
+          })
+        } 
+      </ul>
+
+      <button id="createParticipantBtn" onClick={() => setViewForm(!viewForm)}>create participant form</button>
+      {viewForm && <NewParticipantForm users={participants} setUsers={setParticipants} url={url} />}
+
+    </div>
+  )
+}
+
+export default AdminPanel
+```
