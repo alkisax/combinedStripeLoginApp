@@ -267,6 +267,88 @@ const App = () => {
 
 export default App
 ```
+# Δημιουργία back logger
+#### logger/logger.js
+```js
+const { createLogger, format, transports } = require('winston');
+require('winston-mongodb');
+
+const logger = createLogger({
+  format: format.combine(
+    format.timestamp(),
+    format.simple()
+  ),
+  transports: [
+    new transports.Console(), // show logs in terminal
+
+    // θα μπορούσα να επιλέξω να σωζει και σε αρχεί ή σε Mongo αλλα μιας και είμαι σε dev το αφήνω εκτών
+    // new transports.File({      // save to file
+    //   filename: 'logs/all.log'
+    // }),
+
+    // new transports.MongoDB({   // save to MongoDB
+    //   db: process.env.MONGODB_URI || 'mongodb://localhost:27017/logsdb',
+    //   collection: 'logs',
+    //   level: 'info',  // logs info and above (warn, error)
+    // })
+  ]
+});
+
+module.exports = logger;
+```
+# Δημιουργεία swagger documentation
+#### swagger.js
+```js
+const m2s = require('mongoose-to-swagger');
+const Admin = require('./models/admins.models');
+const Participant = require('./models/participant.models')
+const Transaction = require('./models/transaction.models')
+const swaggerJsdoc = require('swagger-jsdoc');
+
+const options = {
+  definition: {
+    openapi: "3.1.0",
+    info: {
+      version: "1.0.0",
+      title: "Stripe and Auth API",
+      description: "A boilerplate for login and stripe checkout",
+    },
+    components: {
+      schemas: {
+        Admin: m2s(Admin),
+        Participant: m2s(Participant),
+        Transaction: m2s(Transaction),
+      },
+      securitySchemes: {
+        bearerAuth: {
+          type: "http",
+          scheme: "bearer",
+          bearerFormat: "JWT"
+        }
+      }
+    },
+    security: [
+      {
+        bearerAuth: []
+      }
+    ]
+  },
+  // 👇 This is the critical part: tell swagger-jsdoc where to find your route/controller annotations
+  apis: ['./routes/*.js', './controllers/*.js'], // adjust paths if needed
+};
+
+const swaggerSpec = swaggerJsdoc(options);
+
+module.exports = swaggerSpec;
+```
+
+#### app.js
+```js
+const swaggerSpec = require('./swagger');
+const swaggerUi = require('swagger-ui-express');
+
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+```
 
 # Δημιουργια admin
 ## Back
@@ -347,6 +429,7 @@ module.exports = {
 #### admin.controller.js
 ```js
 const bcrypt = require('bcrypt') // για να φτιάξω το hashed pass
+const logger = require('../utils/logger')
 const Admin = require('../models/admins.models')
 const adminDAO = require('../daos/admin.dao')
 
@@ -355,13 +438,15 @@ exports.findAll = async (req,res) => {
 
     // add later when auth
     // if (!req.headers.authorization) {
+    // logger.warn('Unauthorized access attempt to /admins (no token)');
     //   return res.status(401).json({ status: false, error: 'No token provided' });
     // }
 
     const admins = await adminDAO.findAllAdmins();
+    logger.info('Fetched all admins');
     res.status(200).json({ status: true, data: admins });
   } catch (error) {
-    console.error(error);
+    logger.error(`Error fetching admins: ${error.message}`);
     res.status(500).json({ status: false, error: 'Internal server error' });
   }
 }
@@ -387,10 +472,10 @@ exports.create = async (req,res) => {
       hashedPassword
     });
 
-    console.log(`Created new admin: ${username}`);
+    logger.info(`Created new admin: ${username}`);
     res.status(201).json(newAdmin)
   } catch(error) {
-    console.log(`Error creating admin: ${error.message}`);
+    logger.error(`Error creating admin: ${error.message}`);
     res.status(400).json({error: error.message})
   }
 }
@@ -408,17 +493,20 @@ exports.deleteById = async (req, res) => {
     const deleteAdmin = await adminDAO.deleteAdminById(adminId) 
 
     if (!deleteAdmin){
+      logger.warn('Delete admin called without ID');
       return res.status(404).json({
         status: false,
         error: 'Error deleting admin: not found'
       })
     } else {
+      logger.info(`Admin ${deleteAdmin.username} deleted successfully`);
       res.status(200).json({
         status: true,
         message: `Admin ${deleteAdmin.username} deleted successfully`,
       })
     }
   } catch (error) {
+    logger.error(`Error deleting admin: ${error.message}`);
     res.status(500).json({
       status: false,
       error: error.message
@@ -443,11 +531,293 @@ router.post('/', adminController.create) // αυτό είναι βασικό κ�
 
 module.exports = router
 ```
+#### swagger για admin routes
+```js
+/**
+ * @swagger
+ * /admins:
+ *   get:
+ *     summary: Get all admins
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of admins
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: boolean
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Admin'
+ *       500:
+ *         description: Internal server error
+ */
+
+/**
+ * @swagger
+ * /admins:
+ *   post:
+ *     summary: Create a new admin
+ *     tags: [Admin]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [username, name, password, email, roles]
+ *             properties:
+ *               username:
+ *                 type: string
+ *               name:
+ *                 type: string
+ *               password:
+ *                 type: string
+ *               email:
+ *                 type: string
+ *               roles:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *     responses:
+ *       201:
+ *         description: Created admin
+ *       400:
+ *         description: Bad request
+ */
+
+/**
+ * @swagger
+ * /admins/{id}:
+ *   delete:
+ *     summary: Delete admin by ID
+ *     tags: [Admin]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Admin deleted
+ *       400:
+ *         description: Missing or invalid ID
+ *       404:
+ *         description: Admin not found
+ *       500:
+ *         description: Server error
+ */
+```
+
 #### app.js
 ```js
 const adminRoutes = require('./routes/admin.routes')
 
 app.use('/api/admin', adminRoutes)
+```
+## jest testing for admin
+#### package.json
+**το script στο test είναι συμαντικο γιατί αλλιώς δεν τρέχουν δυο μαζί test αρχεία**
+```json
+  "scripts": {
+    "test": "cross-env NODE_ENV=test jest --testTimeout=50000 --runInBand",
+    "dev": "node --watch server.js"
+  },
+```
+#### __test__/admin.test.js
+```js
+const mongoose = require("mongoose");
+const request = require("supertest");
+const bcrypt = require("bcrypt");
+const app = require("../app");
+const jwt = require('jsonwebtoken');
+require('dotenv').config();
+const Admin = require("../models/admins.models");
+const adminDAO = require("../daos/admin.dao");
+
+// Add this mock at the top of your test file to ensure it doesn't interact with the actual Stripe service during tests.
+jest.mock('stripe', () => {
+  return jest.fn().mockImplementation(() => ({
+    // Mock the methods you need, e.g., charge, paymentIntents, etc.
+    charges: {
+      create: jest.fn().mockResolvedValue({ success: true })
+    }
+  }));
+});
+
+const TEST_ADMIN = {
+  username: "adminuser",
+  name: "Admin User",
+  email: "adminuser@example.com",
+  password: "adminpassword",
+  roles: ["admin"]
+};
+
+let adminToken;
+let adminId;
+
+beforeAll(async () => {
+  const saltrounds = 10;
+  const hashedPassword = await bcrypt.hash(TEST_ADMIN.password, saltrounds);
+
+  await mongoose.connect(process.env.MONGODB_TEST_URI);
+  console.log("Connected to MongoDB for testing");
+
+  await Admin.deleteMany({});
+
+  const newAdmin = await Admin.create({
+    username: TEST_ADMIN.username,
+    name: TEST_ADMIN.name,
+    email: TEST_ADMIN.email,
+    hashedPassword,
+    roles: TEST_ADMIN.roles
+  });
+
+  // Simulate admin login to get token
+  const res = await request(app)
+    .post("/api/login")
+    .send({
+      username: TEST_ADMIN.username,
+      password: TEST_ADMIN.password
+    });
+  
+  adminToken = res.body.data.token;
+  adminId = newAdmin._id;
+  console.log("Admin token:", adminToken);
+});
+
+afterAll(async () => {
+  await Admin.deleteMany({});
+  await mongoose.connection.close();
+});
+
+describe('GET /api/admins', () => {
+  it('should return 200 and list of admins when authorized and admin role', async () => {
+    const res = await request(app)
+      .get('/api/admin')
+      .set('Authorization', `Bearer ${adminToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.status).toBe(true);
+    expect(Array.isArray(res.body.data)).toBe(true);
+    expect(res.body.data.length).toBeGreaterThan(0);
+  });
+
+  it('should return 401 when no token is provided', async () => {
+    const res = await request(app)
+      .get('/api/admin');
+
+    expect(res.status).toBe(401);
+    expect(res.body.status).toBe(false);
+  });
+
+  it('should return 403 for non-admin role', async () => {
+    const nonAdminToken = 'some-fake-token-for-non-admin';
+    const res = await request(app)
+      .get('/api/admin')
+      .set('Authorization', `Bearer ${nonAdminToken}`);
+
+    expect(res.status).toBe(401);
+    expect(res.body.status).toBe(false);
+  });
+});
+
+describe('POST /api/admins', () => {
+  it('should create a new admin and return 201', async () => {
+    const newAdmin = {
+      username: 'newadmin',
+      name: 'New Admin',
+      email: 'newadmin@example.com',
+      password: 'newadminpassword',
+      roles: ['admin']
+    };
+
+    const res = await request(app)
+      .post('/api/admin')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send(newAdmin);
+
+    expect(res.status).toBe(201);
+    expect(res.body.username).toBe(newAdmin.username);
+    expect(res.body.name).toBe(newAdmin.name);
+    expect(res.body.email).toBe(newAdmin.email);
+    expect(res.body.roles).toEqual(newAdmin.roles);
+  });
+
+  it('should return 500 when fields are missing', async () => {
+    const newAdmin = {
+      username: 'newadmin'
+      // Missing required fields like name, password, etc.
+    };
+
+    const res = await request(app)
+      .post('/api/admin')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send(newAdmin);
+
+    expect(res.status).toBe(500); //errror coming from mongo
+  });
+
+  it('should return 400 when username already exists', async () => {
+    const existingAdmin = {
+      username: 'existingadmin',
+      name: 'Existing Admin',
+      email: 'existingadmin@example.com',
+      password: 'existingpassword',
+      roles: ['admin']
+    };
+
+    // First, create the admin
+    await request(app)
+      .post('/api/admin')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send(existingAdmin);
+
+    // Try to create the same admin again
+    const res = await request(app)
+      .post('/api/admin')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send(existingAdmin);
+
+    expect(res.status).toBe(400);
+  });
+});
+
+describe('DELETE /api/admin/:id', () => {
+  it('should delete the admin and return 200', async () => {
+    const res = await request(app)
+      .delete(`/api/admin/${adminId}`)
+      .set('Authorization', `Bearer ${adminToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.status).toBe(true);
+    expect(res.body.message).toBe(`Admin ${TEST_ADMIN.username} deleted successfully`);
+  });
+
+  it('should return 404 when no admin id is provided', async () => {
+    const res = await request(app)
+      .delete('/api/admin/')
+      .set('Authorization', `Bearer ${adminToken}`);
+
+    expect(res.status).toBe(404);
+  });
+
+  it('should return 404 when admin id is not found', async () => {
+    const wrongId = '60d9e3f5b4c2b2d6b8a232c9'; // Invalid ID format
+    const res = await request(app)
+      .delete(`/api/admins/${wrongId}`)
+      .set('Authorization', `Bearer ${adminToken}`);
+
+    expect(res.status).toBe(404);
+  });
+});
 ```
 
 *Τωρα που εφτιαξα τον αντμιν μου πρέπει να δημιουργήσω ένα Login για να μπορεί να συνδεθει*
@@ -557,6 +927,7 @@ module.exports = {
 // https://fullstackopen.com/en/part4/token_authentication
 const bcrypt = require ('bcrypt')
 const jwt = require('jsonwebtoken');
+const logger = require('../utils/logger');
 // καλώ πράγματα και απο το auth και απο τον admin
 const Admin = require('../models/admins.models')
 const authService = require('../services/auth.service')
@@ -570,7 +941,7 @@ exports.login = async (req,res) => {
     const password = req.body.password
 
     if (!username) {
-      console.log("Login attempt missing username");
+      logger.warn("Login attempt missing username");
       return res.status(400).json({
         status: false,
         message: "Username is required"
@@ -578,7 +949,7 @@ exports.login = async (req,res) => {
     }
     
     if (!password) {
-      console.log("Login attempt missing password");
+      logger.warn("Login attempt missing password");
       return res.status(400).json({
         status: false,
         message: "Password is required"
@@ -589,7 +960,7 @@ exports.login = async (req,res) => {
     const admin = await adminDAO.findAdminByUsername(req.body.username);
 
     if(!admin){
-      console.log(`Failed login attempt with username: ${req.body.username}`);
+      logger.warn(`Failed login attempt - user not found: ${username}`);
       return res.status(401).json({
         status: false,
         message: 'Invalid username or password or admin not found'
@@ -600,7 +971,7 @@ exports.login = async (req,res) => {
     const isMatch = await authService.verifyPassword (password, admin.hashedPassword)
 
     if(!isMatch){
-      console.log(`Failed login attempt with username: ${req.body.username}`);
+      logger.warn(`Failed login attempt - incorrect password for user: ${username}`);
       return res.status(401).json({
         status: false,
         message: 'Invalid username or password'
@@ -609,7 +980,7 @@ exports.login = async (req,res) => {
 
     // Step 3: Generate the token
     const token = authService.generateAccessToken(admin)
-    console.log(`admin ${admin.username} logged in successfully`);
+    logger.info(`Admin ${admin.username} logged in successfully`);
 
     // Step 4: Return the token and user info
     res.status(200).json({
@@ -626,7 +997,7 @@ exports.login = async (req,res) => {
     })
 
   } catch (error) {
-    console.log(`Login error: ${error.message}`);
+    logger.error(`Login error: ${error.message}`);
     res.status(400).json({
       status: false,
       data: error.message
@@ -638,19 +1009,19 @@ exports.googleLogin = async(req, res) => {
   // αυτόν τον code μου τον επιστρέφει το google μετά το login
   const code = req.query.code
   if (!code) {
-    console.log('Auth code is missing during Google login attempt');
+    logger.warn('Google login failed: missing auth code');
     res.status(400).json({status: false, data: "auth code is missing"})
   } 
 
   // Μέσο στου σερβισ κάνω το google login
   const result = await authService.googleAuth(code);
-  console.log('Google Auth Result:', result);
+    logger.info('Google Auth Result', { result });
 
   // απο τα αποτελέσματ ατου login βάζω σε δύο μεταβλητές το admin και tokens
   const { admin, tokens } = result;
 
   if (!admin || !admin.email) {
-    console.log('Google login failed or incomplete');
+    logger.warn('Google login failed: no email returned');
     return res.status(401).json({ status: false, data: "Google login failed" });
   }
 
@@ -667,11 +1038,10 @@ exports.googleLogin = async(req, res) => {
 
   // το google χρειάζετε που να σε στείλει μετα το login αυτό πρέπει να είναι καταχωρημένο και στο console του google cloud
   const frontendUrl = process.env.FRONTEND_URL
-  console.log(frontendUrl);
+    logger.info(`Redirecting to: ${frontendUrl}/google-success`);
   
   return res.redirect(`${frontendUrl}/google-success?token=${token}&email=${dbUser.email}`);
 }
-
 ```
 #### middleware/verification.middleware.js
 ```js
@@ -734,6 +1104,59 @@ router.get('/google/callback', authController.googleLogin)
 
 module.exports = router
 ```
+#### swagger για auth routes
+```js
+/**
+ * @swagger
+ * tags:
+ *   name: Auth
+ *   description: Authentication endpoints
+ */
+
+/**
+ * @swagger
+ * /auth:
+ *   post:
+ *     summary: Login with username and password
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [username, password]
+ *             properties:
+ *               username:
+ *                 type: string
+ *               password:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Successful login
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 token:
+ *                   type: string
+ *                 user:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                     username:
+ *                       type: string
+ *                     roles:
+ *                       type: array
+ *                       items:
+ *                         type: string
+ *       401:
+ *         description: Invalid credentials
+ */
+```
+
 *Εχω ένα ετοιμο φτιαγμένο λινκ για να δοκιμαζω το google auth χωρις να χρειάζομαι το front end*
 ```url
 https://accounts.google.com/o/oauth2/auth?client_id={apo_to_google}&redirect_uri={apo_to_google}&response_type={apo_to_auth.service}&scope=email%20profile&access_type=offline
@@ -776,4 +1199,124 @@ app.use('/api/login', loginRoutes)
 }
 ```
 
+#### __test__/auth.test
+```js
+const mongoose = require("mongoose");
+const request = require("supertest");
+const bcrypt = require("bcrypt");
+require('dotenv').config();
+const app = require("../app");
+
+const Admin = require("../models/admins.models");
+
+// Add this mock at the top of your test file to ensure it doesn't interact with the actual Stripe service during tests.
+jest.mock('stripe', () => {
+  return jest.fn().mockImplementation(() => ({
+    // Mock the methods you need, e.g., charge, paymentIntents, etc.
+    charges: {
+      create: jest.fn().mockResolvedValue({ success: true })
+    }
+  }));
+});
+
+
+const TEST_ADMIN_LOGIN = {
+  username: "adminuser",
+  name: "Admin User",
+  email: "admin@example.com",
+  password: "securepassword",
+  roles: ["admin"]
+};
+
+beforeEach(async () => {
+  await mongoose.connect(process.env.MONGODB_TEST_URI);
+  await Admin.deleteMany({});
+
+  const saltRounds = 10;
+  const hashedPassword = await bcrypt.hash(TEST_ADMIN_LOGIN.password, saltRounds);
+
+  await Admin.create({
+    username: TEST_ADMIN_LOGIN.username,
+    name: TEST_ADMIN_LOGIN.name,
+    email: TEST_ADMIN_LOGIN.email,
+    hashedPassword: hashedPassword,
+    roles: TEST_ADMIN_LOGIN.roles
+  });
+});
+
+afterAll(async () => {
+  await Admin.deleteMany({});
+  await mongoose.disconnect();
+});
+
+describe("POST /api/login", () => {
+  it("should return token and admin data for valid credentials", async () => {
+    const res = await request(app)
+      .post("/api/login")
+      .send({
+        username: TEST_ADMIN_LOGIN.username,
+        password: TEST_ADMIN_LOGIN.password
+      });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.status).toBe(true);
+    expect(res.body.data.token).toBeDefined();
+    expect(res.body.data.admin).toMatchObject({
+      username: TEST_ADMIN_LOGIN.username,
+      email: TEST_ADMIN_LOGIN.email,
+      roles: TEST_ADMIN_LOGIN.roles
+    });
+  });
+
+  it("should fail with incorrect password", async () => {
+    const res = await request(app)
+      .post("/api/login")
+      .send({
+        username: TEST_ADMIN_LOGIN.username,
+        password: "wrongpassword"
+      });
+
+    expect(res.statusCode).toBe(401);
+    expect(res.body.status).toBe(false);
+    expect(res.body.message).toBe("Invalid username or password");
+  });
+
+  it("should fail with non-existent username", async () => {
+    const res = await request(app)
+      .post("/api/login")
+      .send({
+        username: "ghostuser",
+        password: "anyPassword"
+      });
+
+    expect(res.statusCode).toBe(401);
+    expect(res.body.status).toBe(false);
+    expect(res.body.message).toBe("Invalid username or password or admin not found");
+  });
+
+  it("should fail if username is missing", async () => {
+    const res = await request(app)
+      .post("/api/login")
+      .send({
+        password: TEST_ADMIN_LOGIN.password
+      });
+
+    expect(res.statusCode).toBe(400);
+    expect(res.body.status).toBe(false);
+    expect(res.body.message).toBe("Username is required");
+  });
+
+  it("should fail if password is missing", async () => {
+    const res = await request(app)
+      .post("/api/login")
+      .send({
+        username: TEST_ADMIN_LOGIN.username
+      });
+
+    expect(res.statusCode).toBe(400);
+    expect(res.body.status).toBe(false);
+    expect(res.body.message).toBe("Password is required");
+  });
+});
+```
 ## front login

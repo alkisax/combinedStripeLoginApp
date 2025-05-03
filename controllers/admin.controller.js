@@ -2,19 +2,22 @@ const bcrypt = require('bcrypt')
 const Admin = require('../models/admins.models')
 // const authService = require('../services/auth.service')
 const adminDAO = require('../daos/admin.dao')
+const logger = require('../utils/logger')
 
 exports.findAll = async (req,res) => {
   try {
 
     // add later when auth
     if (!req.headers.authorization) {
+      logger.warn('Unauthorized access attempt to /admins (no token)');
       return res.status(401).json({ status: false, error: 'No token provided' });
     }
 
     const admins = await adminDAO.findAllAdmins();
+    logger.info('Fetched all admins');
     res.status(200).json({ status: true, data: admins });
   } catch (error) {
-    console.error(error);
+    logger.error(`Error fetching admins: ${error.message}`);
     res.status(500).json({ status: false, error: 'Internal server error' });
   }
 }
@@ -41,10 +44,10 @@ exports.create = async (req,res) => {
       hashedPassword
     });
 
-    console.log(`Created new admin: ${username}`);
+    logger.info(`Created new admin: ${username}`);
     res.status(201).json(newAdmin)
   } catch(error) {
-    console.log(`Error creating admin: ${error.message}`);
+    logger.error(`Error creating admin: ${error.message}`);
     res.status(400).json({error: error.message})
   }
 }
@@ -62,17 +65,20 @@ exports.deleteById = async (req, res) => {
     const deleteAdmin = await adminDAO.deleteAdminById(adminId) 
 
     if (!deleteAdmin){
+      logger.warn('Delete admin called without ID');
       return res.status(404).json({
         status: false,
         error: 'Error deleting admin: not found'
       })
     } else {
+      logger.info(`Admin ${deleteAdmin.username} deleted successfully`);
       res.status(200).json({
         status: true,
         message: `Admin ${deleteAdmin.username} deleted successfully`,
       })
     }
   } catch (error) {
+    logger.error(`Error deleting admin: ${error.message}`);
     res.status(500).json({
       status: false,
       error: error.message

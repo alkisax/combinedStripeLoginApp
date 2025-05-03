@@ -2,6 +2,7 @@
 // https://fullstackopen.com/en/part4/token_authentication
 const bcrypt = require ('bcrypt')
 const jwt = require('jsonwebtoken');
+const logger = require('../utils/logger');
 const Admin = require('../models/admins.models')
 const authService = require('../services/auth.service')
 const adminDAO = require('../daos/admin.dao')
@@ -14,7 +15,7 @@ exports.login = async (req,res) => {
     const password = req.body.password
 
     if (!username) {
-      console.log("Login attempt missing username");
+      logger.warn("Login attempt missing username");
       return res.status(400).json({
         status: false,
         message: "Username is required"
@@ -22,7 +23,7 @@ exports.login = async (req,res) => {
     }
     
     if (!password) {
-      console.log("Login attempt missing password");
+      logger.warn("Login attempt missing password");
       return res.status(400).json({
         status: false,
         message: "Password is required"
@@ -33,7 +34,7 @@ exports.login = async (req,res) => {
     const admin = await adminDAO.findAdminByUsername(req.body.username);
 
     if(!admin){
-      console.log(`Failed login attempt with username: ${req.body.username}`);
+      logger.warn(`Failed login attempt - user not found: ${username}`);
       return res.status(401).json({
         status: false,
         message: 'Invalid username or password or admin not found'
@@ -44,7 +45,7 @@ exports.login = async (req,res) => {
     const isMatch = await authService.verifyPassword (password, admin.hashedPassword)
 
     if(!isMatch){
-      console.log(`Failed login attempt with username: ${req.body.username}`);
+      logger.warn(`Failed login attempt - incorrect password for user: ${username}`);
       return res.status(401).json({
         status: false,
         message: 'Invalid username or password'
@@ -53,7 +54,7 @@ exports.login = async (req,res) => {
 
     // Step 3: Generate the token
     const token = authService.generateAccessToken(admin)
-    console.log(`admin ${admin.username} logged in successfully`);
+    logger.info(`Admin ${admin.username} logged in successfully`);
 
     // Step 4: Return the token and user info
     res.status(200).json({
@@ -70,7 +71,7 @@ exports.login = async (req,res) => {
     })
 
   } catch (error) {
-    console.log(`Login error: ${error.message}`);
+    logger.error(`Login error: ${error.message}`);
     res.status(400).json({
       status: false,
       data: error.message
@@ -81,17 +82,17 @@ exports.login = async (req,res) => {
 exports.googleLogin = async(req, res) => {
   const code = req.query.code
   if (!code) {
-    console.log('Auth code is missing during Google login attempt');
+    logger.warn('Google login failed: missing auth code');
     res.status(400).json({status: false, data: "auth code is missing"})
   } 
   // const { admin, tokens } = await authService.googleAuth(code);
   const result = await authService.googleAuth(code);
-  console.log('Google Auth Result:', result);
+  logger.info('Google Auth Result', { result });
 
   const { admin, tokens } = result;
 
   if (!admin || !admin.email) {
-    console.log('Google login failed or incomplete');
+    logger.warn('Google login failed: no email returned');
     return res.status(401).json({ status: false, data: "Google login failed" });
   }
 
@@ -108,7 +109,7 @@ exports.googleLogin = async(req, res) => {
   // return res.redirect(`http://localhost:5173/google-success?token=${token}&email=${dbUser.email}`);
   // return res.redirect(`https://loginapp-tjlf.onrender.com/google-success?token=${token}&email=${dbUser.email}`);
   const frontendUrl = process.env.FRONTEND_URL
-  console.log(frontendUrl);
+  logger.info(`Redirecting to: ${frontendUrl}/google-success`);
   
   return res.redirect(`${frontendUrl}/google-success?token=${token}&email=${dbUser.email}`);
   // return res.redirect(`${frontendUrl}/?token=${token}&email=${dbUser.email}`);

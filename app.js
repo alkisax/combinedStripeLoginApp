@@ -1,6 +1,8 @@
 // require('dotenv').config()
 const express = require('express')
 const cors = require('cors')
+const swaggerSpec = require('./swagger');
+const swaggerUi = require('swagger-ui-express');
 const adminRoutes = require('./routes/admin.routes')
 const loginRoutes = require('./routes/auth.routes')
 const participantRoutes = require('./routes/participant.routes')
@@ -11,6 +13,9 @@ const emailRoutes = require('./routes/email.routes')
 // const path = require('path'); // requires explanation. added for rendering front page subpages
 
 const app = express()
+
+
+
 app.use(cors())
 // app.use(cors({
 //   origin: 'http://localhost:5173', // Your Vite frontend URL
@@ -33,7 +38,9 @@ app.use('/api/transaction', transactionRoutes)
 app.use('/api/stripe', stripeRoutes)
 app.use('/api/email', emailRoutes)
 
-app.use(express.static('dist')) // να το δοκιμασω
+app.use(express.static('dist')) 
+
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // app.get('/*', (req, res, next) => {
 //   if (req.path.startsWith('/api')) {
