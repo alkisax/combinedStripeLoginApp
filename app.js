@@ -1,4 +1,4 @@
-require('dotenv').config()
+// require('dotenv').config()
 const express = require('express')
 const cors = require('cors')
 const adminRoutes = require('./routes/admin.routes')
@@ -12,8 +12,19 @@ const emailRoutes = require('./routes/email.routes')
 
 const app = express()
 app.use(cors())
-app.use(express.static('dist')) // να το δοκιμασω
+// app.use(cors({
+//   origin: 'http://localhost:5173', // Your Vite frontend URL
+//   methods: ['GET', 'POST', 'PUT', 'DELETE'],
+//   allowedHeaders: ['Content-Type', 'Authorization'],
+//   credentials: true // If using cookies/sessions
+// }))
 app.use(express.json());
+
+app.use((req, res, next) => {
+  console.log("Request reached Express!");
+  console.log(`Incoming request: ${req.method} ${req.path}`);
+  next();
+});
 
 app.use('/api/admin', adminRoutes)
 app.use('/api/login', loginRoutes)
@@ -21,6 +32,8 @@ app.use('/api/participant', participantRoutes)
 app.use('/api/transaction', transactionRoutes)
 app.use('/api/stripe', stripeRoutes)
 app.use('/api/email', emailRoutes)
+
+app.use(express.static('dist')) // να το δοκιμασω
 
 // app.get('/*', (req, res, next) => {
 //   if (req.path.startsWith('/api')) {
