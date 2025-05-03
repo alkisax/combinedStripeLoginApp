@@ -3,7 +3,7 @@ const transactionDAO = require('../daos/transaction.dao')
 
 exports.sendThnxEmail = async (req,res) => {
   try {
-
+    console.log('reached sednThnxEmail');    
     const transactionId = req.params.transactionId
     console.log(('transactionId from email.controller', transactionId));    
     const transaction = await transactionDAO.findTransactionById(transactionId)
@@ -11,7 +11,9 @@ exports.sendThnxEmail = async (req,res) => {
     const name = transaction.participant.name
 
     const transporter = nodemailer.createTransport({
-      service: "gmail",
+      host: "smtp.zoho.eu",
+      port: 465,
+      secure: true,
       auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS,
