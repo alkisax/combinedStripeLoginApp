@@ -170,6 +170,7 @@ npm install
 npm install axios
 npm install react-bootstrap
 npm install react-router-dom
+npm install jwt-decode
 ```
 #### package.json
 ```js
@@ -1727,6 +1728,51 @@ const LoginForm = ({ username, password, setUsername, setPassword, handleLogin, 
   )
 }
 export default LoginForm
+```
+## Είναι ακόμα προβληματικό. To log in γινετε μεσο google αλλα
+- αντι να απορίψει αν είναι admin δημιουργεί έναν καινούργιο
+- αν είναι admin δεν του επιτρέπει να πάει στον admin panel
+#### GoogleSucces.jsx
+```jsx
+import { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { jwtDecode } from 'jwt-decode';
+
+const GoogleSuccess = ({ setAdmin, setIsAdmin}) => {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('token');
+    const email = params.get('email');
+
+    if (token) {
+      // Store the token (adjust storage if you prefer memory/Redux/etc.)
+      localStorage.setItem('token', token);
+      localStorage.setItem('email', email);
+
+      // Decode token and extract roles
+      const decoded = jwtDecode(token);
+      console.log('Decoded JWT:', decoded);
+
+      if (decoded.roles?.includes('admin')) {
+        setIsAdmin(true);
+        setAdmin({ email, id: decoded.id });
+      }
+
+      // Redirect to dashboard or homepage
+      navigate('/');
+    } else {
+      // Maybe show error
+      navigate('/login');
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  return <div>Logging you in via Google...</div>;
+};
+
+export default GoogleSuccess;
 ```
 
 - AdminPanel.jsx /admin

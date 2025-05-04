@@ -25,6 +25,7 @@ const App = () => {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [userIsAdmin, setUserIsAdmin] = useState(false)
+  const [isAdmin, setIsAdmin] = useState(false)
   const [users, setUsers] = useState([])
   const [participants, setParticipants] = useState([])
   const [admin, setAdmin] = useState(null)
@@ -165,7 +166,7 @@ const App = () => {
         } />  
 
         <Route path="/google-success" element={
-          <GoogleSuccess setUser={setUser} setUserIsAdmin={setUserIsAdmin} />
+          <GoogleSuccess setAdmin={setAdmin} setIsAdmin={setIsAdmin} />
         } />
 
         <Route path="/login" element={
