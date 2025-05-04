@@ -3029,6 +3029,286 @@ describe('Stripe Controller', () => {
 ```
 
 ## front end διχείρηση του Stripe
+- Οταν πατηθεί το κουμπί buy me a coffe στο menu, πριν πάμε στο checkout συλλεγουμε πληροφορίες του participant μέσο μιας φορμας που στο submit μας κατευθήνει στο chekout
+####  ParticipantInfoForm.jsx
+```jsx
+// Οταν πατηθεί το κουμπί buy me a coffe στο menu, πριν πάμε στο checkout συλλεγουμε πληροφορίες του participant μέσο μιας φορμας που στο submit μας κατευθήνει στο chekout
+// στέλνει ολες τις πληροφορίες του participant ως parms στο checkout και απο εκεί στο backend. Αργοτερα κατάλαβα οτι αυτό είναι περιτό αλλα το αφησα εδω γιατί μπορεί να χρειαστεί
+
+import { Table, Form, Button } from 'react-bootstrap'
+import Checkout from '../components/Checkout'
+import {
+  BrowserRouter as Router,
+  useNavigate
+} from 'react-router-dom'
+
+const ParticipantInfoForm = ({ setNewParticipant }) => {
+
+  const navigate = useNavigate()
+
+  const handleSubmitParticipant = async (event) => {
+    const name = event.target.name.value
+    const surname = event.target.surname.value
+    const email = event.target.email.value
+
+    if (!email) {
+      alert('please enter your email')
+    }
+
+    setNewParticipant({
+      name: name,
+      surname: surname,
+      email: email
+    })
+
+    // Create a query string from the newParticipant object
+    const params = new URLSearchParams({
+      name: name,
+      surname: surname,
+      email: email,
+    }).toString()
+
+    navigate(`/checkout?${params}`)
+  }
+
+  return (
+    <>
+      <div>
+        <h2>Participant info</h2>
+        <Form onSubmit={handleSubmitParticipant}>
+          <Form.Group>
+            <Form.Label>name:</Form.Label>
+            <Form.Control
+              type="text"
+              name="name"
+              placeholder="First Name"
+            />
+          </Form.Group>
+          <Form.Group>
+            <Form.Label>surname:</Form.Label>
+            <Form.Control
+              type="text"
+              name="surname"
+              placeholder="Last Name"
+            />
+          </Form.Group>
+          <Form.Group>
+            <Form.Label>email:</Form.Label>
+            <Form.Control
+              type="email"
+              name="email"
+              placeholder="email"
+              required 
+            />
+          </Form.Group>
+          <Button className='mt-3' variant="primary" type="submit">
+            procced to checkout
+          </Button>
+        </Form>
+      </div>
+    </>
+  )
+}
+
+export default ParticipantInfoForm
+```
+
+#### Checkout.jsx
+```jsx
+import { loadStripe } from '@stripe/stripe-js'
+import axios from 'axios' 
+
+import oneCoin from '../assets/handsMoneyCrop.jpg'
+import twoCoins from '../assets/two coins.jpg'
+import threeCoins from '../assets/three_coins.svg.png'
+
+// added to stripe boilerplate to extract new participant info from url
+import { useSearchParams } from 'react-router-dom'
+
+const PUBLIC_STRIPE_KEY = 'pk_live_51REuM3EsaPshQGwVZxSzQyBw2SJj4CnnSxuf6yWokbg5dRVAM0WpDFrIHnlF0sqQgykl4WVxCw5gA6bhDHWeyrFE00muoS3dkU'
+const BACKEND_URL = 'http://localhost:3001';
+const PRICE_ID_050 = 'price_1RGPe4EsaPshQGwV6vXbMrhE'
+const PRICE_ID_051 = 'price_1RGkyMEsaPshQGwV7rsnw60y'
+const PRICE_ID_052 = 'price_1RGlWzEsaPshQGwVGwpZ9TSb'
+
+const stripePromise = loadStripe(`${PUBLIC_STRIPE_KEY}`)
+
+const Checkout = () => {
+  // added to stripe boilerplate to extract new participant info from url
+  const [searchParams] = useSearchParams()
+
+  const handleCheckout = async (price_id) => {
+    const participantInfo = { 
+      name: searchParams.get('name'),
+      surname: searchParams.get('surname'),  
+      email: searchParams.get('email'),
+    };
+    console.log("participant info>>>", participantInfo);
+    console.log(">>> button clicked, price_id =", price_id)
+
+    try {
+      // added participant info to be sent to back via url params
+      const response = await axios.post(`${BACKEND_URL}/api/stripe/checkout/${price_id}`, { participantInfo })
+
+      const { id } = response.data
+  
+      const stripe = await stripePromise
+      await stripe.redirectToCheckout({ sessionId: id })
+    } catch (error) {
+      console.log(error)
+    }
+  }
+
+    // const handleCheckout = async (price_id) => {
+    //   try {
+    //     const response = await axios.post(`${BACKEND_URL}/api/stripe/checkout/${price_id}`)
+    //     const { id } = response.data
+    
+    //     const stripe = await stripePromise
+    //     await stripe.redirectToCheckout({ sessionId: id })
+    //   } catch (error) {
+    //     console.log(error)
+    //   }
+    // }
+
+  return (
+    <div className="container mt-5" style={{ backgroundColor: '#242424', color: 'white' }}>
+      <h1 className="mb-4 text-center">Support this demo</h1>
+
+      <div className="row justify-content-center">
+        {/* Card 1 */}
+        <div className="col-12 col-sm-4 mb-4">
+          <div className="card border border-white p-3 h-100">
+            <img src={oneCoin} className="card-img-top" alt="Donate 0.50€" />
+            <div className="card-body text-center">
+              <h5 className="card-title">Donate 0.50€</h5>
+              <p className="card-text">A small but mighty donation 🙏</p>
+              <button className="btn btn-primary" onClick={() => handleCheckout(PRICE_ID_050)}>Donate 0.50€</button>
+            </div>
+          </div>
+        </div>
+
+        {/* Card 2 */}
+        <div className="col-12 col-sm-4 mb-4">
+          <div className="card border border-white p-3 h-100">
+            <img src={twoCoins} className="card-img-top" alt="Donate 0.51€" />
+            <div className="card-body text-center">
+              <h5 className="card-title">Donate 0.51€</h5>
+              <p className="card-text">Slightly more generous 😄</p>
+              <button className="btn btn-success" onClick={() => handleCheckout(PRICE_ID_051)}>Donate 0.51€</button>
+            </div>
+          </div>
+        </div>
+
+        {/* Card 3 */}
+        <div className="col-12 col-sm-4 mb-4">
+          <div className="card border border-white p-3 h-100">
+            <img src={threeCoins} className="card-img-top" alt="Donate 0.52€" />
+            <div className="card-body text-center">
+              <h5 className="card-title">Donate 0.52€</h5>
+              <p className="card-text">Wow, you're a hero! 💪</p>
+              <button className="btn btn-warning" onClick={() => handleCheckout(PRICE_ID_052)}>Donate 0.52€</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+export default Checkout
+```
+
+#### Home.jsx
+- στο home πρέπει να γινουν αλλαγές γιατί διαχειρίζετε τα url της επιστροφής απο cancel και success
+```jsx
+const Home = ({ message, setMessage, url }) => {
+  // επρεπε να γίνει γιατι καλούσε το success 2 φορες δημιουργώντας 2 transactions
+  const hasCalledSuccessRef = useRef(false);
+
+  const [searchParams] = useSearchParams()
+  useEffect(() => {
+    const canceled = searchParams.get('canceled'); 
+    const success = searchParams.get('success')
+    // added to manage to call stripe.controller.js handlesucces from frontend
+    const sessionId = searchParams.get('session_id');
+    console.log("sessionId", sessionId);
+    
+
+    if (success === 'true' && sessionId && !hasCalledSuccessRef.current){
+      // επρεπε να φτιαξω μια νεα function γιατι το axios δεν δουλευε αλλιώς
+      const fetchSuccess = async () => {
+        try {
+          const result = await axios.get(`${url}/stripe/success?session_id=${sessionId}`)
+          console.log("Success response:", result.data);
+          // για να εμποδίσει επανάληψη της κλήσης
+          hasCalledSuccessRef.current = true;
+        } catch (error) {
+          console.error ("Error handling success:", error)
+        }
+      }
+      fetchSuccess()
+      setMessage(`Payment successful! thank you! :)
+                  you will soon receive an email with the details`)
+    }
+
+    if (canceled === 'true') {
+      setMessage('Payment canceled! :(');
+      setTimeout(() => {
+        setMessage('');
+      }, 7000); 
+    }
+
+  }, [searchParams, setMessage, url])
+
+  return (
+  )
+}
+```
+
+- και να φτιάξω τα routes στο αρχικό App
+#### App.jsx
+```jsx
+      <Routes>
+        <Route path="/cancel" element={
+          <>
+            <Home 
+              message={message}
+              setMessage={setMessage}
+              url={url}
+            />
+          </>
+        } />
+
+        <Route path="/success" element={
+          <>
+            <Home 
+              message={message}
+              setMessage={setMessage}
+              url={url}
+            />
+          </>
+        } /> 
+
+        <Route path='/buymeacoffee' element={
+          // <Checkout />
+          <Participantinfoform 
+            // newParticipant={newParticipant}
+            setNewParticipant={setNewParticipant}
+          />
+        } />
+
+        <Route path='/checkout' element={
+          <Checkout 
+            // newParticipant={newParticipant}
+          />
+        } />
+      </Routes>
+```
+
+# προβλημα refresh toggle mail
+# προβλημα Google login
+# mail jest test
 
 
 

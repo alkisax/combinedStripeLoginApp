@@ -1,3 +1,6 @@
+// Οταν πατηθεί το κουμπί buy me a coffe στο menu, πριν πάμε στο checkout συλλεγουμε πληροφορίες του participant μέσο μιας φορμας που στο submit μας κατευθήνει στο chekout
+// στέλνει ολες τις πληροφορίες του participant ως parms στο checkout και απο εκεί στο backend. Αργοτερα κατάλαβα οτι αυτό είναι περιτό αλλα το αφησα εδω γιατί μπορεί να χρειαστεί
+
 import { Table, Form, Button } from 'react-bootstrap'
 import Checkout from '../components/Checkout'
 import {
