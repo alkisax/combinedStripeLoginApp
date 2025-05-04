@@ -1,3 +1,91 @@
+- [Οδηγίες δημιουργίας Combined Login Stripe Nodemailer App](#--------------------combined-login-stripe-nodemailer-app)
+- [αρχικοποίηση του back  και του Front](#-----------------back----------front)
+    + [back](#back)
+      - [package.json](#packagejson)
+    + [Front](#front)
+      - [package.json](#packagejson-1)
+      - [.env](#env)
+  * [βασικο boiler plate για back](#-------boiler-plate-----back)
+      - [server.js](#serverjs)
+      - [app.js](#appjs)
+  * [βασικό boilerplate για φροντ](#-------boilerplate----------)
+      - [main.jsx](#mainjsx)
+      - [App.jsx](#appjsx)
+- [Δημιουργία back logger](#-----------back-logger)
+      - [logger/logger.js](#logger-loggerjs)
+- [Δημιουργεία swagger documentation](#------------swagger-documentation)
+      - [swagger.js](#swaggerjs)
+      - [app.js](#appjs-1)
+- [Δημιουργια admin](#-----------admin)
+  * [Back](#back)
+      - [admin.models.js](#adminmodelsjs)
+      - [admin.dao.js](#admindaojs)
+      - [admin.controller.js](#admincontrollerjs)
+      - [admin.routes.js](#adminroutesjs)
+      - [swagger για admin routes](#swagger-----admin-routes)
+      - [app.js](#appjs-2)
+  * [jest testing for admin](#jest-testing-for-admin)
+      - [package.json](#packagejson-2)
+      - [__test__/admin.test.js](#--test---admintestjs)
+- [δημιουργία admin login](#-----------admin-login)
+  * [*Το google login έχει προβληματα. Το βάζω εδω αλλα αργότερα θα αλαχθει* https://console.cloud.google.com/apis/credentials](#----google-login-------------------------------------------------------https---consolecloudgooglecom-apis-credentials)
+      - [auth.service.js](#authservicejs)
+      - [auth.controller.js](#authcontrollerjs)
+      - [middleware/verification.middleware.js](#middleware-verificationmiddlewarejs)
+    + [auth.routes.js](#authroutesjs)
+      - [swagger για auth routes](#swagger-----auth-routes)
+      - [app.js](#appjs-3)
+      - [με ποστμαν](#----------)
+      - [__test__/auth.test](#--test---authtest)
+- [front login](#front-login)
+      - [App.jsx](#appjsx-1)
+      - [ProtectedRoute.jsx](#protectedroutejsx)
+      - [Appbar.jsx](#appbarjsx)
+      - [Home.jsx /](#homejsx--)
+      - [LoginForm.jsx /login](#loginformjsx--login)
+- [Participant Backend](#participant-backend)
+      - [participant.models.js](#participantmodelsjs)
+      - [participant.dao.js](#participantdaojs)
+      - [participant.controller.js](#participantcontrollerjs)
+      - [participant.routes.js](#participantroutesjs)
+      - [swagger documentation for paritcipant routes](#swagger-documentation-for-paritcipant-routes)
+      - [app.js](#appjs-4)
+- [transaction Backend](#transaction-backend)
+      - [transaction.models.js](#transactionmodelsjs)
+      - [transaction.dao.js](#transactiondaojs)
+      - [transactionController.js](#transactioncontrollerjs)
+      - [transaction.routes.js](#transactionroutesjs)
+      - [transaction swagger documentation comments](#transaction-swagger-documentation-comments)
+      - [app.js](#appjs-5)
+- [Admin pannel Front ens](#admin-pannel-front-ens)
+      - [AdminPanel.jsx](#adminpaneljsx)
+      - [App.jsx](#appjsx-2)
+      - [UserDetail.jsx](#userdetailjsx)
+      - [NewParticipantForm.jsx](#newparticipantformjsx)
+      - [Transactions.jsx](#transactionsjsx)
+- [nodemailer](#nodemailer)
+  * [back end διαχείρηση του mailer](#back-end----------------mailer)
+      - [email.routes.js](#emailroutesjs)
+      - [email.routes.js](#emailroutesjs-1)
+      - [swagger documentation for email routes](#swagger-documentation-for-email-routes)
+      - [app.js](#appjs-6)
+- [Stripe CheckOut](#stripe-checkout)
+  * [back end διαχείρηση του Stripe](#back-end----------------stripe)
+      - [services/striper.service.js](#services-striperservicejs)
+      - [stripe.controller.js](#stripecontrollerjs)
+      - [stripe.routes.js](#striperoutesjs)
+      - [swagger documentation for stripe routes](#swagger-documentation-for-stripe-routes)
+      - [app.js](#appjs-7)
+      - [__test__/stripe.test.js](#--test---stripetestjs)
+  * [front end διχείρηση του Stripe](#front-end---------------stripe)
+      - [ParticipantInfoForm.jsx](#participantinfoformjsx)
+      - [Checkout.jsx](#checkoutjsx)
+      - [Home.jsx](#homejsx)
+      - [App.jsx](#appjsx-3)
+- [προβλημα refresh toggle mail](#---------refresh-toggle-mail)
+- [προβλημα Google login](#---------google-login)
+- [mail jest test](#mail-jest-test)
+
 # Οδηγίες δημιουργίας Combined Login Stripe Nodemailer App
 
 # αρχικοποίηση του back  και του Front
@@ -821,7 +909,7 @@ describe('DELETE /api/admin/:id', () => {
 
 *Τωρα που εφτιαξα τον αντμιν μου πρέπει να δημιουργήσω ένα Login για να μπορεί να συνδεθει*
 # δημιουργία admin login
-## *Το google login έχει προβληματα. Το βάζω εδω αλλα αργότερα θα αλαχθει* https://console.cloud.google.com/apis/credentials
+*Το google login έχει προβληματα. Το βάζω εδω αλλα αργότερα θα αλαχθει* https://console.cloud.google.com/apis/credentials
 #### auth.service.js
 ```js
 const jwt = require('jsonwebtoken')
@@ -2519,22 +2607,23 @@ const Transactions =  ({ url }) => {
   const [showAll, setShowAll] = useState(false)
 
 // μου επιστρέφει τη λίστα με τισ συναλλαγές για να τα προβάλει
-  useEffect(() => {
-    const fetchTransactions = async () => {
-      try {
-        const token = localStorage.getItem("token")
-        const response = await axios.get(`${url}/transaction`, {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        })
-        setTransactions(response.data.data)
-        setLoading(false)
-      } catch (error) {
-        console.error("Error fetching transactions:", error)
-        setLoading(false)
-      }
+  const fetchTransactions = async () => {
+    try {
+      const token = localStorage.getItem("token")
+      const response = await axios.get(`${url}/transaction`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      })
+      setTransactions(response.data.data)
+      setLoading(false)
+    } catch (error) {
+      console.error("Error fetching transactions:", error)
+      setLoading(false)
     }
+  }
+
+  useEffect(() => {
     fetchTransactions()
   }, [url])
 
@@ -2560,6 +2649,7 @@ const Transactions =  ({ url }) => {
       console.log("transaction is processed?",isProcessed);
       
       setTransactions(response.data.data)
+      fetchTransactions()
     } catch (error) {
       console.error("Error fetching transactions:", error)
     }

@@ -11,22 +11,23 @@ const Transactions =  ({ url }) => {
   const [showAll, setShowAll] = useState(false)
 
   // μου επιστρέφει τη λίστα με τισ συναλλαγές για να τα προβάλει
-  useEffect(() => {
-    const fetchTransactions = async () => {
-      try {
-        const token = localStorage.getItem("token")
-        const response = await axios.get(`${url}/transaction`, {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        })
-        setTransactions(response.data.data)
-        setLoading(false)
-      } catch (error) {
-        console.error("Error fetching transactions:", error)
-        setLoading(false)
-      }
+  const fetchTransactions = async () => {
+    try {
+      const token = localStorage.getItem("token")
+      const response = await axios.get(`${url}/transaction`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      })
+      setTransactions(response.data.data)
+      setLoading(false)
+    } catch (error) {
+      console.error("Error fetching transactions:", error)
+      setLoading(false)
     }
+  }
+
+  useEffect(() => {
     fetchTransactions()
   }, [url])
 
@@ -34,7 +35,7 @@ const Transactions =  ({ url }) => {
     setShowAll(!showAll)
   }
 
-// κάνει toggle το αν έχει επεξεργαστεί η συναλλαγή. Κάνει trigger το thnx email
+  // κάνει toggle το αν έχει επεξεργαστεί η συναλλαγή. Κάνει trigger το thnx email
   const markProcessed = async (transactionId) => {
     try {
       const token = localStorage.getItem("token")
@@ -52,6 +53,7 @@ const Transactions =  ({ url }) => {
       console.log("transaction is processed?",isProcessed);
       
       setTransactions(response.data.data)
+      fetchTransactions()
     } catch (error) {
       console.error("Error fetching transactions:", error)
     }
