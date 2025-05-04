@@ -82,7 +82,6 @@
       - [Checkout.jsx](#checkoutjsx)
       - [Home.jsx](#homejsx)
       - [App.jsx](#appjsx-3)
-- [προβλημα refresh toggle mail](#---------refresh-toggle-mail)
 - [προβλημα Google login](#---------google-login)
 - [mail jest test](#mail-jest-test)
 
@@ -908,8 +907,9 @@ describe('DELETE /api/admin/:id', () => {
 ```
 
 *Τωρα που εφτιαξα τον αντμιν μου πρέπει να δημιουργήσω ένα Login για να μπορεί να συνδεθει*
+
 # δημιουργία admin login
-*Το google login έχει προβληματα. Το βάζω εδω αλλα αργότερα θα αλαχθει* https://console.cloud.google.com/apis/credentials
+*EDIT: το προβλημα ήταν στο οτι το url και redirect URI μετα την αλλαγή πορτ, έπρεπε να δηλωθούν και στο google console. Το google login έχει προβληματα. Το βάζω εδω αλλα αργότερα θα αλαχθει* https://console.cloud.google.com/apis/credentials
 #### auth.service.js
 ```js
 const jwt = require('jsonwebtoken')
@@ -3396,8 +3396,8 @@ const Home = ({ message, setMessage, url }) => {
       </Routes>
 ```
 
-# προβλημα refresh toggle mail
 # προβλημα Google login
+# fix Swagger
 # mail jest test
 
 
