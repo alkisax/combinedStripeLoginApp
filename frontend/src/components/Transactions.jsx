@@ -1,3 +1,5 @@
+// αυτό είναι ένα συμαντικό component. Μου δείχνει τι τραπεζικές συναλαγές έχουν γίνει και αν αυτές έχουν επεξεργαστεί. Με ένα κουμπι κάνω toggle την επεξεργασία τους. Στο backend η επεξεργασία του transaction αυτομάτος κάνει trigger την αποστολή email με nodemailer
+
 import axios from 'axios'
 import { useState, useEffect } from 'react'
 import { Table, Button } from 'react-bootstrap'
@@ -8,6 +10,7 @@ const Transactions =  ({ url }) => {
   const [loading, setLoading] = useState(true)
   const [showAll, setShowAll] = useState(false)
 
+  // μου επιστρέφει τη λίστα με τισ συναλλαγές για να τα προβάλει
   useEffect(() => {
     const fetchTransactions = async () => {
       try {
@@ -31,12 +34,12 @@ const Transactions =  ({ url }) => {
     setShowAll(!showAll)
   }
 
+// κάνει toggle το αν έχει επεξεργαστεί η συναλλαγή. Κάνει trigger το thnx email
   const markProcessed = async (transactionId) => {
     try {
       const token = localStorage.getItem("token")
       console.log("token: ", token);
       
-
       const response = await axios.put(`${url}/transaction/toggle/${transactionId}`,
         {}, 
         {
@@ -58,6 +61,7 @@ const Transactions =  ({ url }) => {
   return (
     <>
       {loading && <p>Loading...</p>}
+      
       {!loading && transactions.length === 0 && <p>No transactions found</p>}
 
       <Button variant="info" onClick={toggleShowAll} className="mb-3">
@@ -80,6 +84,7 @@ const Transactions =  ({ url }) => {
             </thead>
             <tbody>
               {transactions
+              // με φιλτερ γινεται το show all
                 .filter(t => showAll || !t.processed)
                 .map((transaction) => {
                   const participant = transaction.participant

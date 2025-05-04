@@ -27,6 +27,7 @@ const NewParticipantForm = ({ url, participants, setParticipants }) =>{
       setName('')
       setEmail('')
 
+      // αυτη η μορφή ανανέωσης του state είναι σωστή γιατή μου κάνει refresh την σελίδα
       setParticipants(current => [...current, response.data]); // Take the current state (users) and add the new user (response.data) to the end of the array
     } catch (error) {
       console.error('Error creating participant:', error)

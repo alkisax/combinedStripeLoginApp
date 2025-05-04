@@ -626,7 +626,7 @@ app.use('/api/admin', adminRoutes)
 **το script στο test είναι συμαντικο γιατί αλλιώς δεν τρέχουν δυο μαζί test αρχεία**
 ```json
   "scripts": {
-    "test": "cross-env NODE_ENV=test jest --testTimeout=50000 --runInBand",
+    "test": "cross-env NODE_ENV=test jest --coverage --testTimeout=50000 --runInBand",
     "dev": "node --watch server.js"
   },
 ```
@@ -821,7 +821,7 @@ describe('DELETE /api/admin/:id', () => {
 
 *Τωρα που εφτιαξα τον αντμιν μου πρέπει να δημιουργήσω ένα Login για να μπορεί να συνδεθει*
 # δημιουργία admin login
-# *Το google login έχει προβληματα. Το βάζω εδω αλλα αργότερα θα αλαχθει* https://console.cloud.google.com/apis/credentials
+## *Το google login έχει προβληματα. Το βάζω εδω αλλα αργότερα θα αλαχθει* https://console.cloud.google.com/apis/credentials
 #### auth.service.js
 ```js
 const jwt = require('jsonwebtoken')
@@ -1318,7 +1318,7 @@ describe("POST /api/login", () => {
   });
 });
 ```
-## front login
+# front login
 #### App.jsx
 ```jsx
 const App = () => {
@@ -1643,7 +1643,7 @@ export default LoginForm
 
 - AdminPanel.jsx /admin
 - **πριν δουμε το AdminPanel** θα επιστρέψουμε στο back για να δημιουργήσουμε τον participant (model, dao, controller, routes, test)
-## Participant Backend
+# Participant Backend
 #### participant.models.js
 - name
 - surname
@@ -1919,7 +1919,7 @@ const participantRoutes = require('./routes/participant.routes')
 app.use('/api/participant', participantRoutes)
 ```
 
-## transaction Backend
+# transaction Backend
 #### transaction.models.js
 ```js
 const mongoose = require("mongoose")
@@ -2317,7 +2317,7 @@ const transactionRoutes = require('./routes/transaction.routes')
 
 app.use('/api/transaction', transactionRoutes)
 ```
-## Admin pannel Front ens
+# Admin pannel Front ens
 #### AdminPanel.jsx
 ```jsx
 /* eslint-disable react-hooks/exhaustive-deps */
@@ -2331,6 +2331,9 @@ const AdminPanel = ({url, handleDeleteParticipant, participants, setParticipants
   const [viewForm, setViewForm] = useState(false)
   const [loading, setLoading] = useState(true)
 
+// έχει δυο χωριστα components που εμφανίζονται στο AdminPanel. Ένα που δείχνει όλους τους καταθέτες (και κακός είναι ενσωματωμένο εδώ, θα έπρεπε να είχε δικό του), και ένα που δείχνει πληροφορίες για τις καταθέσεις και κουμπί αν έχει επεξεργαστεί η συναλλαγή ή οχι
+
+//αυτό κάνει ένα get τους participants
   useEffect(() => {
     const fetchParticipants = async () => {
       try {
@@ -2356,14 +2359,23 @@ const AdminPanel = ({url, handleDeleteParticipant, participants, setParticipants
     <div>
       <h2>Admin Panel</h2>
       <p>Only admins can see this.</p>
+
       <Transactions url={url} />
+
       {loading && <p>Loading...</p>}
+
       {!loading && participants.length === 0 && <p>No participants found</p>}
       <ul>
+
+// δεν μας ενοχλεί το return μέσα στο return
         {!loading && participants.length !== 0 && 
           participants.map((participant) => {
             return (
               <li key={participant._id || `${participant.name}-${participant.email}`}>
+// αν κάνεις κλικ σε έναν καταθέτη σε οδηγη σε δικιά του σελίδα (κακός λέγετε users, έχει μείνει απο κοπι πειστ απο προηγουμενη εφαρμογή αλλά αστω)
+// στο App.jsx έχει:
+// <Route path="/users" element={<AdminPanel handleDeleteUser={handleDeleteParticipant} url={url} />} />
+// <Route path="/users/:id" element={<UserDetail />} />
                  <Link to={`/users/${participant._id}`}>
                   {participant.email}
                  </Link>
@@ -2375,6 +2387,7 @@ const AdminPanel = ({url, handleDeleteParticipant, participants, setParticipants
         } 
       </ul>
 
+// κάνει toggle την φορμα για δημιουργεία νεόυ πελάτη
       <button id="createParticipantBtn" onClick={() => setViewForm(!viewForm)}>create participant form</button>
       {viewForm && <NewParticipantForm users={participants} setUsers={setParticipants} url={url} />}
 
@@ -2384,3 +2397,639 @@ const AdminPanel = ({url, handleDeleteParticipant, participants, setParticipants
 
 export default AdminPanel
 ```
+#### App.jsx
+```jsx
+      <Routes>
+        <Route path="/users" element={<AdminPanel handleDeleteUser={handleDeleteParticipant} url={url} />} />
+        <Route path="/users/:id" element={<UserDetail />} />
+      </Routes>
+```
+
+#### UserDetail.jsx
+- δείχνει μόνο το id του participant
+```jsx
+import { useParams } from 'react-router-dom';
+
+const UserDetail = () => {
+  const { id } = useParams();  // Access the id from the route parameter
+  
+  return (
+    <div>
+      <h4>User Detail for ID: {id}</h4>
+      {/* Fetch and display user details here */}
+    </div>
+  );
+};
+
+export default UserDetail;
+```
+
+#### NewParticipantForm.jsx
+```jsx
+/* eslint-disable no-unused-vars */
+import {useState} from 'react'
+import axios from 'axios'
+
+const NewParticipantForm = ({ url, participants, setParticipants }) =>{
+  const [surname, setSurname] = useState('')
+  const [name, setName] = useState('')
+  const [email, setEmail] = useState('')
+
+  const handleSubmitParticipant = async (event) => {
+    event.preventDefault()
+    
+    try {
+      const newParticipant = {
+        "name": name,
+        "surname": surname,
+        "email": email
+      }
+
+      const response = await axios.post(`${url}/participant`, newParticipant)
+
+      console.log('✅ participant created:', response.data)
+      alert('Participant created successfully!')
+
+      // Clear the form if needed
+      setSurname('')
+      setName('')
+      setEmail('')
+
+// αυτη η μορφή ανανέωσης του state είναι σωστή γιατή μου κάνει refresh την σελίδα
+      setParticipants(current => [...current, response.data]); // Take the current state (users) and add the new user (response.data) to the end of the array
+    } catch (error) {
+      console.error('Error creating participant:', error)
+    }
+  }
+
+
+  return (
+    <>
+      <form onSubmit={handleSubmitParticipant}>
+        <div>
+          name
+          <input type="text"
+          id='createName'
+          value={name}
+          name="username"
+          onChange={({target}) => setName(target.value)}
+          autoComplete="Name"
+          />
+        </div>
+        <div>
+          Surname
+          <input type="text"
+          id='createSurname'
+          value={surname}
+          name="surname"
+          onChange={({target}) => setSurname(target.value)}
+          autoComplete="Surname"
+          />
+        </div>
+        <div>
+          email
+          <input type="email"
+          id='createEmail'
+          value={email}
+          name="email"
+          onChange={({target}) => setEmail(target.value)}
+          autoComplete="email"
+          />
+        </div>
+        <button id='submitCreateBtn' type="submit">submit</button>
+      </form>
+    </>
+  )
+}
+export default NewParticipantForm
+```
+
+#### Transactions.jsx
+- αυτό είναι ένα συμαντικό component. Μου δείχνει τι τραπεζικές συναλαγές έχουν γίνει και αν αυτές έχουν επεξεργαστεί. Με ένα κουμπι κάνω toggle την επεξεργασία τους. Στο backend η επεξεργασία του transaction αυτομάτος κάνει trigger την αποστολή email με nodemailer 
+
+```jsx
+import axios from 'axios'
+import { useState, useEffect } from 'react'
+import { Table, Button } from 'react-bootstrap'
+
+
+const Transactions =  ({ url }) => {
+  const [transactions, setTransactions] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [showAll, setShowAll] = useState(false)
+
+// μου επιστρέφει τη λίστα με τισ συναλλαγές για να τα προβάλει
+  useEffect(() => {
+    const fetchTransactions = async () => {
+      try {
+        const token = localStorage.getItem("token")
+        const response = await axios.get(`${url}/transaction`, {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        })
+        setTransactions(response.data.data)
+        setLoading(false)
+      } catch (error) {
+        console.error("Error fetching transactions:", error)
+        setLoading(false)
+      }
+    }
+    fetchTransactions()
+  }, [url])
+
+  const toggleShowAll = () => {
+    setShowAll(!showAll)
+  }
+
+// κάνει toggle το αν έχει επεξεργαστεί η συναλλαγή. Κάνει trigger το thnx email
+  const markProcessed = async (transactionId) => {
+    try {
+      const token = localStorage.getItem("token")
+      console.log("token: ", token);
+      
+      const response = await axios.put(`${url}/transaction/toggle/${transactionId}`,
+        {}, 
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      )
+      const isProcessed = response.data.data.processed
+      console.log("transaction is processed?",isProcessed);
+      
+      setTransactions(response.data.data)
+    } catch (error) {
+      console.error("Error fetching transactions:", error)
+    }
+  }
+
+
+  return (
+    <>
+      {loading && <p>Loading...</p>}
+      
+      {!loading && transactions.length === 0 && <p>No transactions found</p>}
+
+      <Button variant="info" onClick={toggleShowAll} className="mb-3">
+        {showAll ? "Show only unprocessed" : "Show all"}
+      </Button>
+
+      {!loading && Array.isArray(transactions) && transactions.length !== 0 && (
+        <div className="table-responsive">
+          <Table striped bordered hover>
+            <thead>
+              <tr>
+                <th className="d-none d-sm-table-cell">Name</th>
+                <th className="d-none d-sm-table-cell">Surname</th>
+                <th className="d-none d-sm-table-cell">Amount (€)</th>
+                <th>Email</th>
+                <th>Status</th>
+                <th className="d-none d-sm-table-cell">Date</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {transactions
+              // με φιλτερ γινεται το show all
+                .filter(t => showAll || !t.processed) 
+                .map((transaction) => {
+                  const participant = transaction.participant
+                  return (
+                    <tr key={transaction._id}>
+                      <td className="d-none d-sm-table-cell">{participant?.name || 'No Name'}</td>
+                      <td className="d-none d-sm-table-cell">{participant?.surname || 'No Surname'}</td>
+                      <td className="d-none d-sm-table-cell">€{transaction.amount}</td>
+                      <td>{participant?.email || 'No Email'}</td>
+                      <td>{transaction.processed ? 'Processed' : 'Unprocessed'}</td>
+                      <td className="d-none d-sm-table-cell">{new Date(transaction.createdAt).toLocaleString()}</td>
+                      <td>
+                        <Button
+                          variant={transaction.processed ? 'warning' : 'success'}
+                          onClick={() => markProcessed(transaction._id)}
+                        >
+                          {transaction.processed ? 'Mark Unprocessed' : 'Send email & Mark Processed'}
+                        </Button>
+                      </td>
+                    </tr>
+                  )
+                })}
+            </tbody>
+          </Table>
+        </div>
+      )}
+    </>
+  )
+}
+
+export default Transactions
+```
+
+# nodemailer
+## back end διαχείρηση του mailer
+#### email.routes.js
+```js
+const nodemailer = require("nodemailer");
+const transactionDAO = require('../daos/transaction.dao')
+
+exports.sendThnxEmail = async (req,res) => {
+  try {
+    logger.info('reached sednThnxEmail') 
+    // παίρνω το transactionId απο τα params που μου έστειλε το φροντ και με αυτό βρήσκω όλες τις υπόλοιπες πληροφορίες    
+    const transactionId = req.params.transactionId
+    const transaction = await transactionDAO.findTransactionById(transactionId)
+    const email = transaction.participant.email
+    const name = transaction.participant.name
+
+    const transporter = nodemailer.createTransport({
+      host: "smtp.zoho.eu",
+      port: 465,
+      secure: true,
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+      },
+    });
+
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: email,
+      subject: "Thank You for Your Donation",
+      text: `Dear ${name},\n\nThank you for your generous donation! We greatly appreciate your support.\n\nBest regards,\nThe Team`,
+    };
+
+    const emailRecipt = await transporter.sendMail(mailOptions);
+    logger.info('email sent', emailRecipt)
+    res.status(200).json({ status: true, data: emailRecipt });
+  } catch (error) {
+    logger.error('error sending thnx email', error)
+    res.status(500).json({ status: false, error: 'Thnx email Internal server error' });
+  }
+}
+```
+
+#### email.routes.js
+```js
+const express = require('express');
+const router = express.Router();
+const emailController = require('../controllers/email.controller');
+
+router.post('/:transactionId', emailController.sendThnxEmail);
+
+module.exports = router;
+```
+
+#### swagger documentation for email routes
+```js
+/**
+ * @swagger
+ * /api/email/{transactionId}:
+ *   post:
+ *     summary: Send thank-you email for a donation
+ *     tags:
+ *       - Emails
+ *     parameters:
+ *       - in: path
+ *         name: transactionId
+ *         required: true
+ *         description: ID of the transaction used to retrieve participant info
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Thank-you email sent successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   description: Nodemailer response info
+ *       500:
+ *         description: Server error while sending the email
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: boolean
+ *                 error:
+ *                   type: string
+ */
+router.post('/:transactionId', emailController.sendThnxEmail);
+```
+
+#### app.js
+```js
+const emailRoutes = require('./routes/email.routes')
+
+app.use('/api/email', emailRoutes)
+```
+
+# Stripe CheckOut
+## back end διαχείρηση του Stripe
+
+#### services/striper.service.js
+```js
+const Stripe = require('stripe');
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+const express = require('express');
+
+const QUANTITY = 1; // just number not string
+
+// παίρνει απο το φροντ το price_id και της πληροφορίες του πελάτη για να τις περάσει ως μεταντατα. Αργοτερα κατάλαβα οτι τα μεταντατα χάνονται, αλλα το αφήνω εδώ γιατι μπορεί να φανει χρήσιμο
+const createCheckoutSession = async (price_id, participantInfo = {}) => {
+  const BACKEND_URL = process.env.YOUR_DOMAIN || 'http://localhost:3000';
+  const FRONTEND_URL = process.env.FRONTEND_URL || 'http://http://localhost:5173'
+
+  // added to get the participant info from front to be able to create a new transaction
+  const metadata = {
+    name: participantInfo.name || '',
+    surname: participantInfo.surname || '',
+    email: participantInfo.email
+  }
+  console.log('Creating checkout session with metadata:', metadata);
+
+  return await stripe.checkout.sessions.create({
+    payment_method_types: ['card'],
+    line_items: [
+      {
+        price: price_id,
+        quantity: QUANTITY,
+      },
+    ],
+    mode: 'payment',
+
+    // success_url: `${BACKEND_URL}/success?success=true&session_id={CHECKOUT_SESSION_ID}`,
+    success_url: `${FRONTEND_URL}/success?success=true&session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${FRONTEND_URL}/cancel?canceled=true`,
+    metadata: metadata
+
+  });
+};
+
+const retrieveSession = async (sessionId) => {
+  return await stripe.checkout.sessions.retrieve(sessionId);
+};
+
+module.exports = {
+  createCheckoutSession,
+  retrieveSession
+};
+```
+
+#### stripe.controller.js
+```js
+const stripeService = require('../services/stripe.service');
+const transactionDAO = require('../daos/transaction.dao');
+const participantDAO = require('../daos/participant.dao');
+
+const createCheckoutSession = async (req, res) => {
+  const price_id = req.params.price_id;
+  // added to catch participant url params
+  const participantInfo = req.body.participantInfo;
+
+
+  try {
+    // added participantInfo to catch participant url params
+    const session = await stripeService.createCheckoutSession(price_id, participantInfo);
+    res.json(session);
+  } catch (error) {
+    console.error('Error creating checkout session:', error.message);
+    res.status(500).json({ error: error.message });
+  }
+};
+// επειδή το τεστ γινόνταν με κανονικα λεφτα κράτησα μερικα url επιστροφής. αν τα βάλεις στον browser θα συμπεριφερθει σαν επιτυχεία συναλαγής δημιουργόντας transaction και ανανεώνοντας τον participant.
+// test url http://localhost:5173//api/stripe/success?success=true&session_id=cs_live_a1mkTS6fqvKZOmhtC9av3fmJoVGLpTae5WARcA3vclGPqs1CgNUzRxm5iu
+// test url http://localhost:5173/success?success=true&session_id=cs_live_a1n8TEyTBIrIsdg1taD0a2TjB5QaiCWTWSlGF6sslVeqXSnQgykb9yHDyp
+// test url http://localhost:5173/success?success=true&session_id=cs_live_a16HqUdBc0VjlzlhfxfzMCDML6jYuvKoSXYusUdEwcTOO3RKCuperj2RB7
+const handleSuccess = async (req, res) => {
+  try {
+    // συλλέγω διάφορα δεδομένα του χρήστη απο το url του success
+    const sessionId = req.query.session_id;
+    if (!sessionId) {
+      return res.status(400).send('Missing session ID.');
+    }
+
+    //prevent dublicate transactions
+    const existingTransaction = await transactionDAO.findBySessionId(sessionId);
+    if (existingTransaction) {
+      return res.status(200).send("Transaction already recorded.");
+    }
+
+    // δεν είμαι σιγουρος τι κανει. αλλα μάλλον κάνει await το response
+    const session = await stripeService.retrieveSession(sessionId);
+
+    const name = session.metadata.name
+    const surname = session.metadata.surname
+    const email  = session.metadata.email 
+
+    if (!email) {
+      return res.status(400).send('Missing session ID.');
+    }
+
+    // κάνω τα ευρώ σέντς
+    const amountTotal = session.amount_total / 100; // Stripe returns cents
+
+    console.log(`Payment success for: ${email}, amount: ${amountTotal}`);
+
+    // ψαχνω τον participant απο το ημαιλ του για να τον ανανεώσω αν υπάρχει ή ν α τον δημιουργήσω
+    let participant = await participantDAO.findParticipantByEmail(email);
+
+    if (participant) {
+      console.log(`Participant ${participant.email} found`);      
+    }
+
+    if (!participant) {
+      console.log('Participant not found, creating new one...');
+      // δημιουργία νεου participant
+      participant = await participantDAO.createParticipant({ email: email, name: name, surname: surname });
+    }
+
+    // δημιουργία transaction
+    const newTransaction = await transactionDAO.createTransaction({
+      amount: amountTotal,
+      processed: false,
+      participant: participant._id
+    });
+    console.log("new transaction>>>", newTransaction);
+
+    // push the new transaction’s _id into the participant’s transactions array
+    await participantDAO.addTransactionToParticipant(
+      participant._id,
+      newTransaction._id
+    );
+    console.log(`Added transaction ${newTransaction._id} to participant ${participant._id}`);
+    
+
+    return res.send('Success! Your donation was recorded. Thank you!');
+  } catch (error) {
+    console.error('Error processing success route:', error.message);
+    return res.status(500).send('Something went wrong.');
+  }
+};
+
+const handleCancel = (req, res) => {
+  return res.send('Payment canceled! :(');
+};
+
+module.exports = {
+  createCheckoutSession,
+  handleSuccess,
+  handleCancel
+};
+```
+
+#### stripe.routes.js
+```js
+const express = require('express');
+const router = express.Router();
+const stripeController = require('../controllers/stripe.controller');
+
+router.post('/checkout/:price_id', stripeController.createCheckoutSession);
+router.get('/success', stripeController.handleSuccess);
+router.get('/cancel', stripeController.handleCancel);
+
+module.exports = router;
+```
+
+#### swagger documentation for stripe routes
+```js
+/**
+ * @swagger
+ * /api/stripe/checkout/{price_id}:
+ *   post:
+ *     summary: Create a Stripe Checkout session
+ *     tags: [Stripe]
+ *     parameters:
+ *       - in: path
+ *         name: price_id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Stripe price ID for the product
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               participantInfo:
+ *                 type: object
+ *                 properties:
+ *                   name:
+ *                     type: string
+ *                   surname:
+ *                     type: string
+ *                   email:
+ *                     type: string
+ *                     format: email
+ *     responses:
+ *       200:
+ *         description: Checkout session created
+ *       500:
+ *         description: Server error
+ */
+router.post('/checkout/:price_id', stripeController.createCheckoutSession);
+
+/**
+ * @swagger
+ * /api/stripe/success:
+ *   get:
+ *     summary: Handle success callback from Stripe
+ *     tags: [Stripe]
+ *     parameters:
+ *       - in: query
+ *         name: session_id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The Stripe session ID
+ *     responses:
+ *       200:
+ *         description: Transaction recorded or already exists
+ *       400:
+ *         description: Missing session ID
+ *       500:
+ *         description: Error processing transaction
+ */
+router.get('/success', stripeController.handleSuccess);
+
+/**
+ * @swagger
+ * /api/stripe/cancel:
+ *   get:
+ *     summary: Handle canceled payment from Stripe
+ *     tags: [Stripe]
+ *     responses:
+ *       200:
+ *         description: Payment canceled
+ */
+router.get('/cancel', stripeController.handleCancel);
+```
+
+#### app.js
+```js
+const stripeRoutes = require('./routes/stripe.routes')
+
+app.use('/api/stripe', stripeRoutes)
+```
+
+#### __test__/stripe.test.js
+```js
+
+// 1) Mock the Stripe library so it never talks to the real Stripe API:
+jest.mock('stripe', () => {
+  return jest.fn().mockImplementation(() => ({
+    checkout: {
+      sessions: {
+        // Default: succeed with this fake session
+        create: jest.fn().mockResolvedValue({
+          id: 'mock_session_id',
+          url: 'https://mock-stripe-url.com/checkout'
+        })
+      }
+    }
+  }));
+});
+
+const request = require('supertest');
+const app = require('../app');
+
+describe('Stripe Controller', () => {
+  describe('POST /api/stripe/checkout/:price_id', () => {
+
+    it('should create a checkout session and return it', async () => {
+      const response = await request(app)
+        .post('/api/stripe/checkout/mock_price_id')
+        .send({
+          participantInfo: {
+            name: 'John',
+            surname: 'Doe',
+            email: 'john@example.com'
+          }
+        });
+
+      expect(response.status).toBe(200);
+      // We only check that our mock data comes back:
+      expect(response.body).toHaveProperty('id', 'mock_session_id');
+      expect(response.body).toHaveProperty(
+        'url',
+        'https://mock-stripe-url.com/checkout'
+      );
+    });
+  });
+});
+```
+
+## front end διχείρηση του Stripe
+
+
+
+

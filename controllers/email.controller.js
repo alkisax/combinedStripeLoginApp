@@ -1,11 +1,12 @@
+const logger = require('../utils/logger')
 const nodemailer = require("nodemailer");
 const transactionDAO = require('../daos/transaction.dao')
 
 exports.sendThnxEmail = async (req,res) => {
   try {
-    console.log('reached sednThnxEmail');    
+    logger.info('reached sednThnxEmail') 
+    // παίρνω το transactionId απο τα params που μου έστειλε το φροντ και με αυτό βρήσκω όλες τις υπόλοιπες πληροφορίες    
     const transactionId = req.params.transactionId
-    console.log(('transactionId from email.controller', transactionId));    
     const transaction = await transactionDAO.findTransactionById(transactionId)
     const email = transaction.participant.email
     const name = transaction.participant.name
@@ -28,9 +29,10 @@ exports.sendThnxEmail = async (req,res) => {
     };
 
     const emailRecipt = await transporter.sendMail(mailOptions);
+    logger.info('email sent', emailRecipt)
     res.status(200).json({ status: true, data: emailRecipt });
   } catch (error) {
-    console.error(error);
+    logger.error('error sending thnx email', error)
     res.status(500).json({ status: false, error: 'Thnx email Internal server error' });
   }
 }

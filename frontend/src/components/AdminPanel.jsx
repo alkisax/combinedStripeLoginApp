@@ -34,8 +34,11 @@ const AdminPanel = ({url, handleDeleteParticipant, participants, setParticipants
     <div>
       <h2>Admin Panel</h2>
       <p>Only admins can see this.</p>
+
       <Transactions url={url} />
+
       {loading && <p>Loading...</p>}
+      
       {!loading && participants.length === 0 && <p>No participants found</p>}
       <ul>
         {!loading && participants.length !== 0 && 

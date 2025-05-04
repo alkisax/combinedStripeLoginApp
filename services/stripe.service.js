@@ -4,6 +4,7 @@ const express = require('express');
 
 const QUANTITY = 1; // just number not string
 
+// παίρνει απο το φροντ το price_id και της πληροφορίες του πελάτη για να τις περάσει ως μεταντατα. Αργοτερα κατάλαβα οτι τα μεταντατα χάνονται, αλλα το αφήνω εδώ γιατι μπορεί να φανει χρήσιμο
 const createCheckoutSession = async (price_id, participantInfo = {}) => {
   const BACKEND_URL = process.env.YOUR_DOMAIN || 'http://localhost:3000';
   const FRONTEND_URL = process.env.FRONTEND_URL || 'http://http://localhost:5173'

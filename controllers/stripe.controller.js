@@ -1,6 +1,7 @@
 const stripeService = require('../services/stripe.service');
 const transactionDAO = require('../daos/transaction.dao');
 const participantDAO = require('../daos/participant.dao');
+const logger = require('../utils/logger')
 
 const createCheckoutSession = async (req, res) => {
   const price_id = req.params.price_id;
@@ -9,7 +10,7 @@ const createCheckoutSession = async (req, res) => {
 
 
   try {
-    // added to catch participant url params
+    // added participantInfo to catch participant url params
     const session = await stripeService.createCheckoutSession(price_id, participantInfo);
     res.json(session);
   } catch (error) {
@@ -17,6 +18,7 @@ const createCheckoutSession = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+// επειδή το τεστ γινόνταν με κανονικα λεφτα κράτησα μερικα url επιστροφής. αν τα βάλεις στον browser θα συμπεριφερθει σαν επιτυχεία συναλαγής δημιουργόντας transaction και ανανεώνοντας τον participant.
 // test url http://localhost:5173//api/stripe/success?success=true&session_id=cs_live_a1mkTS6fqvKZOmhtC9av3fmJoVGLpTae5WARcA3vclGPqs1CgNUzRxm5iu
 // test url http://localhost:5173/success?success=true&session_id=cs_live_a1n8TEyTBIrIsdg1taD0a2TjB5QaiCWTWSlGF6sslVeqXSnQgykb9yHDyp
 // test url http://localhost:5173/success?success=true&session_id=cs_live_a16HqUdBc0VjlzlhfxfzMCDML6jYuvKoSXYusUdEwcTOO3RKCuperj2RB7
