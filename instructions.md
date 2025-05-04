@@ -1021,7 +1021,7 @@ const Admin = require('../models/admins.models')
 const authService = require('../services/auth.service')
 const adminDAO = require('../daos/admin.dao')
 
-
+const FRONTEND_URL = process.env.FRONTEND_URL
 exports.login = async (req,res) => {
   try {
     // μου έχει έρΘει (απο το postman) κάτι σαν object {} με username και password
@@ -1114,19 +1114,23 @@ exports.googleLogin = async(req, res) => {
   }
 
   // 🔐 Create token for your app (JWT etc.)
-  // δεν ξέρω τι κάνει TODO
-  const dbUser = await Admin.findOneAndUpdate(
-    { email: admin.email },
-    { $setOnInsert: { email: admin.email, name: admin.name, roles: ['admin'] } },
-    { upsert: true, new: true }
+  // 🛑 Only use existing user
+  const dbUser = await Admin.findOne(
+    { email: admin.email }
   );
+
+  // συμαντικό: εδω κάνουμε redirect στο front αν το login είναι μέν επιτυχημένο αλλα το μέηλ δεν είναι στα mail των admin
+  if (!dbUser) {
+    logger.warn(`Google login failed: user with email ${admin.email} not found in DB`);
+    return res.redirect(`${FRONTEND_URL}/login?error=not_registered`).json({ status: false, data: "User not registered" });
+  }
 
   const payload = { id: dbUser._id, roles: dbUser.roles };
   const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1d' });
 
-  // το google χρειάζετε που να σε στείλει μετα το login αυτό πρέπει να είναι καταχωρημένο και στο console του google cloud
+  // return res.redirect(`http://localhost:5173/google-success?token=${token}&email=${dbUser.email}`);
   const frontendUrl = process.env.FRONTEND_URL
-    logger.info(`Redirecting to: ${frontendUrl}/google-success`);
+  logger.info(`Redirecting to: ${frontendUrl}/google-success`);
   
   return res.redirect(`${frontendUrl}/google-success?token=${token}&email=${dbUser.email}`);
 }
@@ -1540,14 +1544,19 @@ export default App
 import { Navigate } from 'react-router-dom';
 
 const ProtectedRoute = ({ admin , children, requiredRole }) => {
+
+  if (admin === null) {
+    return <div>Loading...</div>; 
+  }
+
   if (!admin) {
     console.log("protected failed");    
     return <Navigate to="/" />;
   }
 
-  if (requiredRole && !admin.roles.includes(requiredRole)) {
+  if (requiredRole && !admin?.roles?.includes(requiredRole)) {
     console.log("protected passed"); 
-    return <Navigate to="/" />;
+    return <Navigate to="/admin" />;
   }
 
   return children;
@@ -1731,7 +1740,9 @@ export default LoginForm
 ```
 ## Είναι ακόμα προβληματικό. To log in γινετε μεσο google αλλα
 - αντι να απορίψει αν είναι admin δημιουργεί έναν καινούργιο
+- - λύθηκε: το πρόβλημα ήταν οτι το back έκανε find one and update, αντί για find one
 - αν είναι admin δεν του επιτρέπει να πάει στον admin panel
+- - Λύθηκε: το πρόβλημα ήταν η ασυμφωνια των δεδομένων του google με αυτά στο mongo db. Κράτάει μόνο το μέηλ κ του βάζει ρόλο admin.
 #### GoogleSucces.jsx
 ```jsx
 import { useEffect } from 'react';
@@ -1746,24 +1757,33 @@ const GoogleSuccess = ({ setAdmin, setIsAdmin}) => {
     const token = params.get('token');
     const email = params.get('email');
 
+    if (!token) {
+      console.log("login failed");
+      return navigate('/login');
+    }
+
     if (token) {
-      // Store the token (adjust storage if you prefer memory/Redux/etc.)
       localStorage.setItem('token', token);
       localStorage.setItem('email', email);
 
       // Decode token and extract roles
       const decoded = jwtDecode(token);
       console.log('Decoded JWT:', decoded);
-
-      if (decoded.roles?.includes('admin')) {
-        setIsAdmin(true);
-        setAdmin({ email, id: decoded.id });
-      }
+      const adminData = {
+        email,
+        id: decoded.id,
+        roles: ['admin'], // Set roles as admin since only admins can log in
+      };
+  
+      localStorage.setItem('admin', JSON.stringify(adminData));
+    
+      setAdmin(true);
+      setIsAdmin(adminData);
 
       // Redirect to dashboard or homepage
       navigate('/');
     } else {
-      // Maybe show error
+      console.log("login failed");      
       navigate('/login');
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps

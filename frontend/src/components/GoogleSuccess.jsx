@@ -10,24 +10,33 @@ const GoogleSuccess = ({ setAdmin, setIsAdmin}) => {
     const token = params.get('token');
     const email = params.get('email');
 
+    if (!token) {
+      console.log("login failed");
+      return navigate('/login');
+    }
+
     if (token) {
-      // Store the token (adjust storage if you prefer memory/Redux/etc.)
       localStorage.setItem('token', token);
       localStorage.setItem('email', email);
 
       // Decode token and extract roles
       const decoded = jwtDecode(token);
       console.log('Decoded JWT:', decoded);
-
-      if (decoded.roles?.includes('admin')) {
-        setIsAdmin(true);
-        setAdmin({ email, id: decoded.id });
-      }
+      const adminData = {
+        email,
+        id: decoded.id,
+        roles: ['admin'], // Set roles as admin since only admins can log in
+      };
+  
+      localStorage.setItem('admin', JSON.stringify(adminData));
+    
+      setAdmin(true);
+      setIsAdmin(adminData);
 
       // Redirect to dashboard or homepage
       navigate('/');
     } else {
-      // Maybe show error
+      console.log("login failed");      
       navigate('/login');
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps

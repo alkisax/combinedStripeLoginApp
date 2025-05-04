@@ -1,4 +1,3 @@
-/* eslint-disable no-unused-vars */
 import { Navbar, Nav, Container, Button } from 'react-bootstrap';
 import { Link, Routes, Route } from 'react-router-dom';
 

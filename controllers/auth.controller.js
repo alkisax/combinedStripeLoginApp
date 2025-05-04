@@ -7,7 +7,7 @@ const Admin = require('../models/admins.models')
 const authService = require('../services/auth.service')
 const adminDAO = require('../daos/admin.dao')
 
-
+const FRONTEND_URL = process.env.FRONTEND_URL
 exports.login = async (req,res) => {
   try {
 
@@ -97,11 +97,16 @@ exports.googleLogin = async(req, res) => {
   }
 
   // 🔐 Create token for your app (JWT etc.)
-  const dbUser = await Admin.findOneAndUpdate(
-    { email: admin.email },
-    { $setOnInsert: { email: admin.email, name: admin.name, roles: ['admin'] } },
-    { upsert: true, new: true }
+  // 🛑 Only use existing user
+  const dbUser = await Admin.findOne(
+    { email: admin.email }
   );
+
+    // συμαντικό: εδω κάνουμε redirect στο front αν το login είναι μέν επιτυχημένο αλλα το μέηλ δεν είναι στα mail των admin
+  if (!dbUser) {
+    logger.warn(`Google login failed: user with email ${admin.email} not found in DB`);
+    return res.redirect(`${FRONTEND_URL}/login?error=not_registered`).json({ status: false, data: "User not registered" });
+  }
 
   const payload = { id: dbUser._id, roles: dbUser.roles };
   const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '1d' });
