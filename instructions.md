@@ -92,7 +92,6 @@
 ### back
 
 ```bash
-npm init
 npm install express
 npm install mongoose
 npm install dotenv
@@ -108,13 +107,15 @@ npm install google-auth-library
 npm install axios
 npm install cors
 npm install morgan
-npm install express-async-errors
+npm install nodemailer
+npm install stripe
 npm install --save-dev nodemon
 npm install --save-dev supertest
 npm install --save-dev cross-env
-npm install prop-types
-npm install --save-dev jest @babel/preset-env @babel/preset-react eslint-plugin-jest
-npm install --save-dev deep-freeze
+npm install --save-dev jest
+npm install --save-dev @babel/preset-env
+npm install --save-dev @babel/preset-react
+npm install --save-dev eslint-plugin-jest
 ```
 
 #### package.json
@@ -124,7 +125,7 @@ npm install --save-dev deep-freeze
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "cross-env NODE_ENV=test jest --coverage --testTimeout=50000 --runInBand",
     "dev": "node --watch server.js"
   },
   "author": "",
@@ -167,10 +168,23 @@ npm install --save-dev deep-freeze
 ```bash
 npm create vite@latest frontend -- --template react
 npm install
+npm install @stripe/stripe-js
 npm install axios
-npm install react-bootstrap
-npm install react-router-dom
+npm install bootstrap
 npm install jwt-decode
+npm install react
+npm install react-bootstrap
+npm install react-dom
+npm install react-router-dom
+npm install --save-dev @eslint/js
+npm install --save-dev @types/react
+npm install --save-dev @types/react-dom
+npm install --save-dev @vitejs/plugin-react
+npm install --save-dev eslint
+npm install --save-dev eslint-plugin-react-hooks
+npm install --save-dev eslint-plugin-react-refresh
+npm install --save-dev globals
+npm install --save-dev vite
 ```
 #### package.json
 ```js
@@ -189,6 +203,7 @@ npm install jwt-decode
     "@stripe/stripe-js": "^7.2.0",
     "axios": "^1.8.4",
     "bootstrap": "^5.3.5",
+    "jwt-decode": "^4.0.0",
     "react": "^19.0.0",
     "react-bootstrap": "^2.10.9",
     "react-dom": "^19.0.0",
