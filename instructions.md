@@ -469,6 +469,7 @@ const adminSchema = new Schema({
     required: false,
     unique: true
   },
+// προσοχή αποθηκεύω hased password και όχι password
   hashedPassword:{
     type: String,
     required: [true, 'password is required'],
