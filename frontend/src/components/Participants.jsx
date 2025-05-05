@@ -33,7 +33,7 @@ const Participants = ({ loading, participants, handleDeleteParticipant, showPart
             }
           </ul>
 
-// κάνει toggle την φορμα για δημιουργεία νεόυ πελάτη 
+{/* // κάνει toggle την φορμα για δημιουργεία νεόυ πελάτη  */}
           <button id="createParticipantBtn" onClick={() => setViewForm(!viewForm)}>
             create participant form
           </button>
