@@ -112,12 +112,15 @@ const App = () => {
   };
   
   return (
-    <div className="bg-dark text-light  d-flex flex-column justify-content-center align-items-center" style={{ minHeight: '100vh'}}>
+<div className="bg-dark text-light d-flex flex-column justify-content-center align-items-center" style={{ minHeight: '100vh', position: 'relative' }}>
 
+    <div className="position-absolute top-0 end-0 p-2 z-3">
       <Appbar 
         admin={admin}
         handleLogout={handleLogout}
       />
+    </div>
+
 
       {/* Routes here handle sub-pages like /admin */}
       <Routes>
@@ -196,8 +199,8 @@ const App = () => {
           />
         } />
 
-        <Route path="/users" element={<AdminPanel handleDeleteUser={handleDeleteParticipant} url={url} />} />
-        <Route path="/users/:id" element={<UserDetail />} />
+        <Route path="/participant" element={<AdminPanel handleDeleteUser={handleDeleteParticipant} url={url} />} />
+        <Route path="/participant/:id" element={<UserDetail />} />
       </Routes>
     </div>
   )

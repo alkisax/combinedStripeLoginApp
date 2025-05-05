@@ -11,7 +11,7 @@ const authController = require('../controllers/auth.controller')
 
 /**
  * @swagger
- * /auth:
+ * /api/login:
  *   post:
  *     summary: Login with username and password
  *     tags: [Auth]
@@ -25,8 +25,10 @@ const authController = require('../controllers/auth.controller')
  *             properties:
  *               username:
  *                 type: string
+ *                 example: admin123
  *               password:
  *                 type: string
+ *                 example: MySecurePassword1!
  *     responses:
  *       200:
  *         description: Successful login
@@ -35,36 +37,89 @@ const authController = require('../controllers/auth.controller')
  *             schema:
  *               type: object
  *               properties:
- *                 token:
- *                   type: string
- *                 user:
+ *                 status:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
  *                   type: object
  *                   properties:
- *                     id:
+ *                     token:
  *                       type: string
- *                     username:
- *                       type: string
- *                     roles:
- *                       type: array
- *                       items:
- *                         type: string
+ *                       example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+ *                     admin:
+ *                       type: object
+ *                       properties:
+ *                         username:
+ *                           type: string
+ *                           example: admin123
+ *                         email:
+ *                           type: string
+ *                           format: email
+ *                           example: admin@example.com
+ *                         roles:
+ *                           type: array
+ *                           items:
+ *                             type: string
+ *                           example: ["admin"]
+ *                         id:
+ *                           type: string
+ *                           example: 609e12672f1b2c001f2b1234
+ *       400:
+ *         description: Missing credentials or other error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: Username is required
  *       401:
- *         description: Invalid credentials
+ *         description: Invalid username or password
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: Invalid username or password
  */
 router.post('/', authController.login)
 
 /**
-* @swagger
-* /auth/google/callback:
-*   get:
-*     summary: Google OAuth login callback
-*     tags: [Auth]
-*     responses:
-*       200:
-*         description: Successful login via Google
-*       400:
-*         description: Google login failed
-*/
+ * @swagger
+ * /auth/google/callback:
+ *   get:
+ *     summary: Google OAuth login callback
+ *     tags: [Auth]
+ *     description: Handles the OAuth callback from Google. Redirects to frontend with token on success, or with an error on failure.
+ *     parameters:
+ *       - in: query
+ *         name: code
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The authorization code returned from Google
+ *     responses:
+ *       302:
+ *         description: Redirect to frontend with token and email on success
+ *         headers:
+ *           Location:
+ *             description: Redirect URL including token and email query params
+ *             schema:
+ *               type: string
+ *       400:
+ *         description: Missing authorization code from Google
+ *       401:
+ *         description: Email not found in database (user not registered)
+ */
 router.get('/google/callback', authController.googleLogin)
 
 module.exports = router

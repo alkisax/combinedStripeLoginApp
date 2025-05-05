@@ -87,7 +87,7 @@ exports.toggleProcessed = async (req,res) => {
     const transaction = await transactionDAO.findTransactionById(transactionId);
 
     if (!transaction) {
-      logger.warn('Transaction not found with ID: %s', transactionId);
+      logger.warn('Transaction not found with ID: ', transactionId);
       return res.status(404).json({
         status: false,
         error: 'Transaction not found',
@@ -102,10 +102,10 @@ exports.toggleProcessed = async (req,res) => {
 
     // εδώ στέλνουμε το email
     await axios.post(`${BACKEND_URL}/api/email/${transactionId}`)
-    logger.info('Toggled processed status for transaction %s to %s', transactionId, updatedData.processed);
+    logger.info('Toggled processed status for transaction ', transactionId, updatedData.processed);
     res.status(200).json({ status: true, data: updatedTransaction})
   } catch (error) {
-    logger.error('Error toggling transaction processed status: %s', error.message);
+    logger.error('Error toggling transaction processed status: ', error.message);
     res.status(500).json({
       status:false,
       error: error.message
@@ -127,20 +127,20 @@ exports.deleteById = async (req, res) => {
     const deleteTransaction = await transactionDAO.deleteTransactionById(transactionId) 
 
     if (!deleteTransaction){
-      logger.warn('Transaction not found for deletion with ID: %s', transactionId);
+      logger.warn('Transaction not found for deletion with ID: ', transactionId);
       return res.status(404).json({
         status: false,
         error: 'Error deleting transaction: not found'
       })
     } else {
-      logger.info('Deleted transaction with ID: %s', transactionId);
+      logger.info('Deleted transaction with ID: ', transactionId);
       res.status(200).json({
         status: true,
         message: `transaction deleted successfully`,
       })
     }
   } catch (error) {
-    logger.error('Error deleting transaction: %s', error.message);
+    logger.error('Error deleting transaction: ', error.message);
     res.status(500).json({
       status: false,
       error: error.message

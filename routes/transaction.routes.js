@@ -13,7 +13,7 @@ const { verifyToken, checkRole } = require('../middlewares/verification.middlewa
 
 /**
  * @swagger
- * /api/transactions:
+ * /api/transaction:
  *   get:
  *     summary: Get all transactions (admin only)
  *     tags: [Transactions]
@@ -22,6 +22,17 @@ const { verifyToken, checkRole } = require('../middlewares/verification.middlewa
  *     responses:
  *       200:
  *         description: A list of transactions
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: boolean
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Transaction'
  *       401:
  *         description: Unauthorized
  *       403:
@@ -32,7 +43,7 @@ router.get('/', verifyToken, checkRole('admin'), transactionController.findAll)
 // GET unprocessed transactions (admin only)
 /**
  * @swagger
- * /api/transactions/unprocessed:
+ * /api/transaction/unprocessed:
  *   get:
  *     summary: Get unprocessed transactions (admin only)
  *     tags: [Transactions]
@@ -41,6 +52,17 @@ router.get('/', verifyToken, checkRole('admin'), transactionController.findAll)
  *     responses:
  *       200:
  *         description: List of unprocessed transactions
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: boolean
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Transaction'
  *       401:
  *         description: Unauthorized
  *       403:
@@ -51,7 +73,7 @@ router.get('/unprocessed', verifyToken, checkRole('admin'), transactionControlle
 // POST create a new transaction (no auth yet)
 /**
  * @swagger
- * /api/transactions:
+ * /api/transaction:
  *   post:
  *     summary: Create a new transaction
  *     tags: [Transactions]
@@ -70,10 +92,23 @@ router.get('/unprocessed', verifyToken, checkRole('admin'), transactionControlle
  *               processed:
  *                 type: boolean
  *               participant:
- *                 type: string
+ *                 type: 681482bc65fc51183432885e
  *     responses:
  *       201:
  *         description: Transaction created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 amount:
+ *                   type: number
+ *                 processed:
+ *                   type: boolean
+ *                 participant:
+ *                   type: string
+ *                 _id:
+ *                   type: string
  *       400:
  *         description: Invalid input
  */
@@ -82,7 +117,7 @@ router.post('/', transactionController.create);
 // DELETE a transaction by ID (admin only)
 /**
  * @swagger
- * /api/transactions/{id}:
+ * /api/transaction/{id}:
  *   delete:
  *     summary: Delete a transaction by ID (admin only)
  *     tags: [Transactions]
@@ -97,20 +132,34 @@ router.post('/', transactionController.create);
  *         description: Transaction ID
  *     responses:
  *       200:
- *         description: Transaction deleted
+ *         description: Transaction deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: "Transaction deleted successfully"
  *       404:
  *         description: Transaction not found
+ *       400:
+ *         description: Bad request (missing or invalid ID)
  *       401:
  *         description: Unauthorized
  *       403:
  *         description: Forbidden
  */
+
 router.delete('/:id', verifyToken, checkRole('admin'), transactionController.deleteById)
 
 // αυτο είναι σημαντικό γιατι στέλνει το αυτόματο ημαιλ
 /**
  * @swagger
- * /api/transactions/toggle/{id}:
+ * /api/transaction/toggle/{id}:
  *   put:
  *     summary: Toggle the processed status of a transaction (admin only)
  *     tags: [Transactions]
@@ -125,13 +174,26 @@ router.delete('/:id', verifyToken, checkRole('admin'), transactionController.del
  *         description: Transaction ID
  *     responses:
  *       200:
- *         description: Transaction updated
+ *         description: Transaction updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   description: The updated transaction object
  *       404:
  *         description: Transaction not found
+ *       400:
+ *         description: Bad request (missing or invalid ID)
  *       401:
  *         description: Unauthorized
  *       403:
- *         description: Forbidden
+ *         description: Forbidden (admin access required)
  */
 router.put('/toggle/:id', verifyToken, checkRole('admin'), transactionController.toggleProcessed)
 

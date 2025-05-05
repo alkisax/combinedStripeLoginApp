@@ -12,25 +12,36 @@ const { verifyToken, checkRole } = require('../middlewares/verification.middlewa
 
 /**
  * @swagger
- * /participants:
+ * /api/participant:
  *   get:
- *     summary: Get all participants
+ *     summary: Get all participants (admin only)
  *     tags: [Participants]
  *     security:
  *       - bearerAuth: []
  *     responses:
  *       200:
- *         description: A list of participants
+ *         description: A list of all participants
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: boolean
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Participant'
  *       401:
- *         description: Unauthorized - no token
- *       403:
- *         description: Forbidden - not admin
+ *         description: Unauthorized - token missing or invalid
+ *       500:
+ *         description: Server error fetching participants
  */
 router.get ('/', verifyToken, checkRole('admin'), participantController.findAll)
 
 /**
  * @swagger
- * /participants:
+ * /api/participant:
  *   post:
  *     summary: Create a new participant
  *     tags: [Participants]
@@ -50,22 +61,40 @@ router.get ('/', verifyToken, checkRole('admin'), participantController.findAll)
  *               surname:
  *                 type: string
  *               email:
- *                 type: string
+ *                 type: string@whatever.com
  *               transactions:
  *                 type: array
  *                 items:
- *                   type: string
+ *                   type: 507f1f77bcf86cd799439011
  *     responses:
  *       201:
- *         description: Participant created
+ *         description: Participant created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 _id:
+ *                   type: string
+ *                 name:
+ *                   type: string
+ *                 surname:
+ *                   type: string
+ *                 email:
+ *                   type: string
+ *                 transactions:
+ *                   type: array
+ *                   items:
+ *                     type: string
  *       400:
- *         description: Bad request
+ *         description: Invalid input or request body
  */
+
 router.post('/', participantController.create)
 
 /**
  * @swagger
- * /participants/{id}:
+ * /api/participant/{id}:
  *   delete:
  *     summary: Delete a participant by ID
  *     tags: [Participants]
@@ -81,6 +110,15 @@ router.post('/', participantController.create)
  *     responses:
  *       200:
  *         description: Participant deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
  *       404:
  *         description: Participant not found
  *       401:

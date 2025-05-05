@@ -622,7 +622,7 @@ module.exports = router
 ```js
 /**
  * @swagger
- * /admins:
+ * /api/admin:
  *   get:
  *     summary: Get all admins
  *     tags: [Admin]
@@ -638,17 +638,44 @@ module.exports = router
  *               properties:
  *                 status:
  *                   type: boolean
+ *                   example: true
  *                 data:
  *                   type: array
  *                   items:
  *                     $ref: '#/components/schemas/Admin'
+ *       401:
+ *         description: Unauthorized - No token provided
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: string
+ *                   example: No token provided
  *       500:
  *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: string
+ *                   example: Internal server error
  */
+router.get ('/', verifyToken, checkRole('admin'), adminController.findAll)
+// router.get ('/', adminController.findAll)
 
 /**
  * @swagger
- * /admins:
+ * /api/admin:
  *   post:
  *     summary: Create a new admin
  *     tags: [Admin]
@@ -662,45 +689,112 @@ module.exports = router
  *             properties:
  *               username:
  *                 type: string
+ *                 example: admin123
  *               name:
  *                 type: string
+ *                 example: Admin User
  *               password:
  *                 type: string
+ *                 example: MySecurePassword1!
  *               email:
  *                 type: string
+ *                 format: email
+ *                 example: admin@example.com
  *               roles:
  *                 type: array
  *                 items:
  *                   type: string
+ *                 example: ["admin"]
  *     responses:
  *       201:
- *         description: Created admin
+ *         description: Admin created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Admin'
  *       400:
- *         description: Bad request
+ *         description: Bad request - Invalid or missing input
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: Username already exists
  */
+router.post('/', adminController.create)
 
 /**
  * @swagger
- * /admins/{id}:
+ * /api/admin/{id}:
  *   delete:
  *     summary: Delete admin by ID
  *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
  *         required: true
  *         schema:
  *           type: string
+ *         description: The ID of the admin to delete
  *     responses:
  *       200:
- *         description: Admin deleted
+ *         description: Admin deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: Admin admin123 deleted successfully
  *       400:
  *         description: Missing or invalid ID
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: string
+ *                   example: Admin ID is required OR not found
  *       404:
  *         description: Admin not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: string
+ *                   example: Error deleting admin: not found
  *       500:
  *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: boolean
+ *                   example: false
+ *                 error:
+ *                   type: string
+ *                   example: Internal server error
  */
+router.delete('/:id', verifyToken, checkRole('admin'), adminController.deleteById)
 ```
 
 #### app.js
@@ -1207,7 +1301,7 @@ module.exports = router
 
 /**
  * @swagger
- * /auth:
+ * /api/login:
  *   post:
  *     summary: Login with username and password
  *     tags: [Auth]
@@ -1221,8 +1315,10 @@ module.exports = router
  *             properties:
  *               username:
  *                 type: string
+ *                 example: admin123
  *               password:
  *                 type: string
+ *                 example: MySecurePassword1!
  *     responses:
  *       200:
  *         description: Successful login
@@ -1231,22 +1327,90 @@ module.exports = router
  *             schema:
  *               type: object
  *               properties:
- *                 token:
- *                   type: string
- *                 user:
+ *                 status:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
  *                   type: object
  *                   properties:
- *                     id:
+ *                     token:
  *                       type: string
- *                     username:
- *                       type: string
- *                     roles:
- *                       type: array
- *                       items:
- *                         type: string
+ *                       example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+ *                     admin:
+ *                       type: object
+ *                       properties:
+ *                         username:
+ *                           type: string
+ *                           example: admin123
+ *                         email:
+ *                           type: string
+ *                           format: email
+ *                           example: admin@example.com
+ *                         roles:
+ *                           type: array
+ *                           items:
+ *                             type: string
+ *                           example: ["admin"]
+ *                         id:
+ *                           type: string
+ *                           example: 609e12672f1b2c001f2b1234
+ *       400:
+ *         description: Missing credentials or other error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: Username is required
  *       401:
- *         description: Invalid credentials
+ *         description: Invalid username or password
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: Invalid username or password
  */
+router.post('/', authController.login)
+
+/**
+ * @swagger
+ * /auth/google/callback:
+ *   get:
+ *     summary: Google OAuth login callback
+ *     tags: [Auth]
+ *     description: Handles the OAuth callback from Google. Redirects to frontend with token on success, or with an error on failure.
+ *     parameters:
+ *       - in: query
+ *         name: code
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The authorization code returned from Google
+ *     responses:
+ *       302:
+ *         description: Redirect to frontend with token and email on success
+ *         headers:
+ *           Location:
+ *             description: Redirect URL including token and email query params
+ *             schema:
+ *               type: string
+ *       400:
+ *         description: Missing authorization code from Google
+ *       401:
+ *         description: Email not found in database (user not registered)
+ */
+router.get('/google/callback', authController.googleLogin)
 ```
 
 *Εχω ένα ετοιμο φτιαγμένο λινκ για να δοκιμαζω το google auth χωρις να χρειάζομαι το front end*
@@ -1988,25 +2152,36 @@ module.exports = router
 
 /**
  * @swagger
- * /participants:
+ * /api/participant:
  *   get:
- *     summary: Get all participants
+ *     summary: Get all participants (admin only)
  *     tags: [Participants]
  *     security:
  *       - bearerAuth: []
  *     responses:
  *       200:
- *         description: A list of participants
+ *         description: A list of all participants
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: boolean
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/Participant'
  *       401:
- *         description: Unauthorized - no token
- *       403:
- *         description: Forbidden - not admin
+ *         description: Unauthorized - token missing or invalid
+ *       500:
+ *         description: Server error fetching participants
  */
-router.get('/', verifyToken, checkRole('admin'), participantController.findAll);
+router.get ('/', verifyToken, checkRole('admin'), participantController.findAll)
 
 /**
  * @swagger
- * /participants:
+ * /api/participant:
  *   post:
  *     summary: Create a new participant
  *     tags: [Participants]
@@ -2026,22 +2201,40 @@ router.get('/', verifyToken, checkRole('admin'), participantController.findAll);
  *               surname:
  *                 type: string
  *               email:
- *                 type: string
+ *                 type: string@whatever.com
  *               transactions:
  *                 type: array
  *                 items:
- *                   type: string
+ *                   type: 507f1f77bcf86cd799439011
  *     responses:
  *       201:
- *         description: Participant created
+ *         description: Participant created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 _id:
+ *                   type: string
+ *                 name:
+ *                   type: string
+ *                 surname:
+ *                   type: string
+ *                 email:
+ *                   type: string
+ *                 transactions:
+ *                   type: array
+ *                   items:
+ *                     type: string
  *       400:
- *         description: Bad request
+ *         description: Invalid input or request body
  */
-router.post('/', participantController.create);
+
+router.post('/', participantController.create)
 
 /**
  * @swagger
- * /participants/{id}:
+ * /api/participant/{id}:
  *   delete:
  *     summary: Delete a participant by ID
  *     tags: [Participants]
@@ -2057,6 +2250,15 @@ router.post('/', participantController.create);
  *     responses:
  *       200:
  *         description: Participant deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
  *       404:
  *         description: Participant not found
  *       401:
@@ -2183,11 +2385,11 @@ exports.findAll = async (req,res) => {
     }
 
     const transactions = await transactionDAO.findAllTransactions();
-    logger.info('Fetched all transactions: %d found', transactions.length);
+    logger.info('Fetched all transactions', transactions.length);
     res.status(200).json({ status: true, data: transactions });
   } catch (error) {
     console.error(error);
-    logger.error('Error in findAll: %s', error.message);
+    logger.error('Error in findAll', error.message);
     res.status(500).json({ status: false, error: 'Internal server error' });
   }
 }
@@ -2202,14 +2404,14 @@ exports.findUnprocessed = async (req,res) => {
     }
 
     const unprocessed = await transactionDAO.findTransactionsByProcessed(false)
-    logger.info('Fetched unprocessed transactions: %d found', unprocessed.length);
+    logger.info('Fetched unprocessed transactions', unprocessed.length);
     res.status(200).json({
       status: true,
       data: unprocessed
     })
 
   } catch (error) {
-    logger.error('Error in findUnprocessed: %s', error.message);
+    logger.error('Error in findUnprocessed', error.message);
     res.status(500).json(error)
   }
 }
@@ -2227,7 +2429,7 @@ exports.create = async (req,res) => {
       participant
     });
 
-    logger.info('Created transaction: %o', { amount, participant });
+    logger.info('Created transaction', { amount, participant });
     await participantDAO.addTransactionToParticipant(participant, newTransaction._id);
 
     res.status(201).json(newTransaction)
@@ -2252,7 +2454,7 @@ exports.toggleProcessed = async (req,res) => {
     const transaction = await transactionDAO.findTransactionById(transactionId);
 
     if (!transaction) {
-      logger.warn('Transaction not found with ID: %s', transactionId);
+      logger.warn('Transaction not found with ID', transactionId);
       return res.status(404).json({
         status: false,
         error: 'Transaction not found',
@@ -2267,7 +2469,7 @@ exports.toggleProcessed = async (req,res) => {
 
     // εδώ στέλνουμε το email
     await axios.post(`${BACKEND_URL}/api/email/${transactionId}`)
-    logger.info('Toggled processed status for transaction %s to %s', transactionId, updatedData.processed);
+    logger.info('Toggled processed status for transaction', transactionId, updatedData.processed);
     res.status(200).json({ status: true, data: updatedTransaction})
   } catch (error) {
     logger.error('Error toggling transaction processed status: %s', error.message);
@@ -2292,20 +2494,20 @@ exports.deleteById = async (req, res) => {
     const deleteTransaction = await transactionDAO.deleteTransactionById(transactionId) 
 
     if (!deleteTransaction){
-      logger.warn('Transaction not found for deletion with ID: %s', transactionId);
+      logger.warn('Transaction not found for deletion with ID: ', transactionId);
       return res.status(404).json({
         status: false,
         error: 'Error deleting transaction: not found'
       })
     } else {
-      logger.info('Deleted transaction with ID: %s', transactionId);
+      logger.info('Deleted transaction with ID: ', transactionId);
       res.status(200).json({
         status: true,
         message: `transaction deleted successfully`,
       })
     }
   } catch (error) {
-    logger.error('Error deleting transaction: %s', error.message);
+    logger.error('Error deleting transaction: ', error.message);
     res.status(500).json({
       status: false,
       error: error.message
@@ -2478,14 +2680,14 @@ app.use('/api/transaction', transactionRoutes)
 import { useState, useEffect  } from "react"
 import { Link } from 'react-router-dom'
 import axios from 'axios'
-import NewParticipantForm from './NewParticipantForm'
+import Participants from './Participants'
 import Transactions from './Transactions'
 
 const AdminPanel = ({url, handleDeleteParticipant, participants, setParticipants}) => {
-  const [viewForm, setViewForm] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [showParticipants, setShowParticipants] = useState(false);
 
-// έχει δυο χωριστα components που εμφανίζονται στο AdminPanel. Ένα που δείχνει όλους τους καταθέτες (και κακός είναι ενσωματωμένο εδώ, θα έπρεπε να είχε δικό του), και ένα που δείχνει πληροφορίες για τις καταθέσεις και κουμπί αν έχει επεξεργαστεί η συναλλαγή ή οχι
+// έχει δυο χωριστα components που εμφανίζονται στο AdminPanel. Ένα που δείχνει όλους τους καταθέτες (και κακός είναι ενσωματωμένο εδώ, θα έπρεπε να είχε δικό του *EDITED* αλλαχθηκε και πήγε σε χωριστό αρχείο), και ένα που δείχνει πληροφορίες για τις καταθέσεις και κουμπί αν έχει επεξεργαστεί η συναλλαγή ή οχι
 
 //αυτό κάνει ένα get τους participants
   useEffect(() => {
@@ -2516,34 +2718,19 @@ const AdminPanel = ({url, handleDeleteParticipant, participants, setParticipants
 
       <Transactions url={url} />
 
-      {loading && <p>Loading...</p>}
+      <button onClick={() => setShowParticipants(!showParticipants)} className="btn btn-primary">
+        {showParticipants && 'Hide Participants'}
+        {!showParticipants && 'Show Participants'}
+      </button>
 
-      {!loading && participants.length === 0 && <p>No participants found</p>}
-      <ul>
-
-// δεν μας ενοχλεί το return μέσα στο return
-        {!loading && participants.length !== 0 && 
-          participants.map((participant) => {
-            return (
-              <li key={participant._id || `${participant.name}-${participant.email}`}>
-// αν κάνεις κλικ σε έναν καταθέτη σε οδηγη σε δικιά του σελίδα (κακός λέγετε users, έχει μείνει απο κοπι πειστ απο προηγουμενη εφαρμογή αλλά αστω)
-// στο App.jsx έχει:
-// <Route path="/users" element={<AdminPanel handleDeleteUser={handleDeleteParticipant} url={url} />} />
-// <Route path="/users/:id" element={<UserDetail />} />
-                 <Link to={`/users/${participant._id}`}>
-                  {participant.email}
-                 </Link>
-                 - {participant.name} - {participant.email} - {participant.surname}
-                 <button id={`${participant.email}Btn`} onClick={() => handleDeleteParticipant(participant._id)}>Delete</button>
-              </li>
-            )
-          })
-        } 
-      </ul>
-
-// κάνει toggle την φορμα για δημιουργεία νεόυ πελάτη
-      <button id="createParticipantBtn" onClick={() => setViewForm(!viewForm)}>create participant form</button>
-      {viewForm && <NewParticipantForm users={participants} setUsers={setParticipants} url={url} />}
+      <Participants
+        loading={loading}
+        participants={participants}
+        handleDeleteParticipant={handleDeleteParticipant}
+        setParticipants={setParticipants}
+        url={url}
+        showParticipants={showParticipants}
+      />
 
     </div>
   )
@@ -2551,11 +2738,69 @@ const AdminPanel = ({url, handleDeleteParticipant, participants, setParticipants
 
 export default AdminPanel
 ```
+
+#### Participants.jsx
+```jsx
+import { useState  } from "react"
+import { Link } from "react-router-dom"
+import NewParticipantForm from './NewParticipantForm'
+
+const Participants = ({ loading, participants, handleDeleteParticipant, showParticipants, setParticipants, url}) => {
+
+  const [viewForm, setViewForm] = useState(false)
+
+
+  return (
+    <>
+      {showParticipants && (
+        <>
+          {loading && <p>Loading...</p>}
+          
+          {!loading && participants.length === 0 && <p>No participants found</p>}
+  
+          <ul>
+            {!loading && participants.length !== 0 &&
+              participants.map((participant) => (
+                <li key={participant._id || `${participant.name}-${participant.email}`}>
+                  {/* // αν κάνεις κλικ σε έναν καταθέτη σε οδηγη σε δικιά του σελίδα 
+                  // στο App.jsx έχει:
+                  // <Route path="/users" element={<AdminPanel handleDeleteUser={handleDeleteParticipant} url={url} />} />
+                  // <Route path="/users/:id" element={<UserDetail />} /> */}
+                  <Link to={`/participant/${participant._id}`}>
+                    {participant.email}
+                  </Link>
+                  - {participant.name} - {participant.email} - {participant.surname}
+                  <button id={`${participant.email}Btn`} onClick={() => handleDeleteParticipant(participant._id)}>Delete</button>
+                </li>
+              ))
+            }
+          </ul>
+
+// κάνει toggle την φορμα για δημιουργεία νεόυ πελάτη 
+          <button id="createParticipantBtn" onClick={() => setViewForm(!viewForm)}>
+            create participant form
+          </button>
+  
+          {viewForm && 
+            <NewParticipantForm 
+              users={participants} 
+              setUsers={setParticipants} 
+              url={url} 
+            />}
+        </>
+      )}
+    </>
+  )
+}
+
+export default Participants
+```
+
 #### App.jsx
 ```jsx
       <Routes>
-        <Route path="/users" element={<AdminPanel handleDeleteUser={handleDeleteParticipant} url={url} />} />
-        <Route path="/users/:id" element={<UserDetail />} />
+        <Route path="/participant" element={<AdminPanel handleDeleteUser={handleDeleteParticipant} url={url} />} />
+        <Route path="/participant/:id" element={<UserDetail />} />
       </Routes>
 ```
 
@@ -3462,9 +3707,22 @@ const Home = ({ message, setMessage, url }) => {
       </Routes>
 ```
 
-# προβλημα Google login
-# fix Swagger
+# App.jsx -> Appbar επάνω δεξια
+```jsx
+<div className="bg-dark text-light d-flex flex-column justify-content-center align-items-center" style={{ minHeight: '100vh', position: 'relative' }}>
+
+    <div className="position-absolute top-0 end-0 p-2 z-3">
+      <Appbar 
+        admin={admin}
+        handleLogout={handleLogout}
+      />
+    </div>
+</div>
+```
+
 # mail jest test
+# Cypress test
+# update notes dependencies
 
 
 
